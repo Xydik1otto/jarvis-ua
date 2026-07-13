@@ -356,6 +356,8 @@ To use different Piper voices, download from [HuggingFace](https://huggingface.c
 }
 ```
 
+**Jarvis replies in the language of the voice you install.** Piper ships voices for 40+ languages, and a voice can only pronounce its own. Point `tts_piper_model_path` at, say, `uk_UA-ukrainian_tts-medium.onnx` and Jarvis both answers and speaks in Ukrainian. Download the `.onnx` and its `.onnx.json` sidecar together: the sidecar is how Jarvis knows what language the voice speaks. The default voice is British English, so an untouched install is unaffected.
+
 **Chatterbox** - AI voice with emotion control (requires running from source):
 ```json
 { "tts_engine": "chatterbox" }

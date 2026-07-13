@@ -14,6 +14,7 @@ Design principles enforced by the engine:
 - Unified System Prompt: A single prompt with adaptive guidance handles all topics; no per-profile routing.
 - Tool Response Flow: Tools return raw data; formatting/personality is handled by the LLM through the engine's loop. The system prompt explicitly instructs the model to use tool results to fulfill the user's original request, not to describe the structure or format of the tool response.
 - Language-Agnostic Design: Prompts and ASR guidance avoid language-specific phrasing.
+- Voice-Bound Reply Language: the spoken reply must be pronounceable by the active TTS voice. A Piper voice carries no phonemes outside its own language, so a Ukrainian voice reading Latin script (or a British one reading Cyrillic) synthesises as silence. `resolve_reply_language()` therefore asks the voice what it speaks (`language.name_english` in the Piper sidecar) and `build_reply_language_guidance()` pins the reply to it. Chatterbox is English-only. An absent or unreadable sidecar falls back to English, so the default install is unchanged. When `tts_enabled` is false nothing is spoken, so no language line is emitted and the model answers in the user's language.
 - Data Privacy: Inputs are redacted and logging is concise and purposeful via `debug_log`.
 
 ### Entry and Inputs

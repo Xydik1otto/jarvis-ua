@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import platform
 import subprocess
 import threading
@@ -37,6 +38,38 @@ def _get_piper_models_dir() -> Path:
 def _get_default_piper_model_path() -> str:
     """Get the path to the default Piper voice model."""
     return str(_get_piper_models_dir() / f"{PIPER_DEFAULT_VOICE}.onnx")
+
+
+def get_piper_voice_language(model_path: Optional[str] = None) -> Optional[str]:
+    """Get the English name of the language a Piper voice speaks.
+
+    Every Piper voice ships a sidecar ``<model>.onnx.json`` carrying a
+    ``language.name_english`` field ("English", "Ukrainian", "Turkish", ...).
+    Reading it lets callers discover what the configured voice can actually
+    pronounce instead of assuming English.
+
+    Args:
+        model_path: Path to the ``.onnx`` voice model. Falls back to the
+            default voice when omitted.
+
+    Returns:
+        The language name, or None when the sidecar is absent or unreadable
+        (voice not downloaded yet, hand-rolled model, corrupt file).
+    """
+    raw = model_path or _get_default_piper_model_path()
+    if not isinstance(raw, (str, os.PathLike)):
+        return None
+    # Piper's sidecar sits next to the model: voice.onnx -> voice.onnx.json
+    sidecar = Path(f"{raw}.json")
+    try:
+        with sidecar.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        name = data.get("language", {}).get("name_english")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    except Exception as exc:
+        debug_log(f"could not read voice language from {sidecar}: {exc}", "tts")
+    return None
 
 
 def _download_piper_voice(voice_name: str, progress_callback: Optional[Callable[[str], None]] = None) -> Optional[str]:

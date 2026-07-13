@@ -60,6 +60,7 @@ from .planner import (
     resolve_next_tool_call as _resolve_plan_step,
 )
 from ..tools.selection import select_tools, ToolSelectionStrategy
+from ..output.tts import get_piper_voice_language
 import json
 import re
 import uuid
@@ -797,6 +798,51 @@ def _build_enrichment_context_hint(cfg, recent_messages: list) -> Optional[str]:
     return "\n\n".join(parts) if parts else None
 
 
+# The reply must be pronounceable by the active TTS voice: a Ukrainian voice
+# has no phonemes for Latin script and a British one has none for Cyrillic,
+# so a mismatch is synthesised as silence or noise. Rather than pinning every
+# install to English, ask the voice what language it speaks and constrain the
+# reply to that. Piper carries the answer in its sidecar config; Chatterbox is
+# English-only. An unknown voice falls back to English, so a default install
+# behaves exactly as before.
+_FALLBACK_REPLY_LANGUAGE = "English"
+
+
+def resolve_reply_language(cfg) -> Optional[str]:
+    """Get the language the configured TTS voice can pronounce.
+
+    Returns None when TTS is disabled, leaving the reply language unconstrained
+    so the model can answer in whatever language the user spoke.
+    """
+    if not getattr(cfg, "tts_enabled", True):
+        return None
+
+    # Same gate as before: only the engines we actually speak through get to
+    # constrain the reply. Anything else (including a stubbed cfg in tests)
+    # leaves the language open, exactly as it did when this was hardcoded.
+    engine = getattr(cfg, "tts_engine", "piper")
+    if engine == "chatterbox":
+        return _FALLBACK_REPLY_LANGUAGE
+    if engine != "piper":
+        return None
+
+    voice_language = get_piper_voice_language(
+        getattr(cfg, "tts_piper_model_path", None)
+    )
+    return voice_language or _FALLBACK_REPLY_LANGUAGE
+
+
+def build_reply_language_guidance(cfg) -> Optional[str]:
+    """Get the system-prompt line pinning the reply language, if any."""
+    language = resolve_reply_language(cfg)
+    if not language:
+        return None
+    return (
+        f"Always respond in {language} regardless of the language the user "
+        "speaks in."
+    )
+
+
 def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
                     text: str, dialogue_memory: "DialogueMemory",
                     language: Optional[str] = None) -> Optional[str]:
@@ -1447,14 +1493,10 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
         # Add model-size-appropriate prompt components
         guidance.extend(prompts.to_list())
 
-        # Both current TTS engines (Piper, Chatterbox) only support English.
-        # Responding in another language would produce garbled audio.
-        # Remove this constraint when a multilingual TTS engine is added.
-        tts_engine = getattr(cfg, 'tts_engine', 'piper')
-        if tts_engine in ('piper', 'chatterbox'):
-            guidance.append(
-                "Always respond in English regardless of the language the user speaks in."
-            )
+        # Pin the reply to whatever the active TTS voice can pronounce.
+        language_guidance = build_reply_language_guidance(cfg)
+        if language_guidance:
+            guidance.append(language_guidance)
 
         if warm_profile_block:
             # Pre-query, query-agnostic user context. Lives OUTSIDE the
