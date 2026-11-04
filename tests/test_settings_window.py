@@ -6,6 +6,7 @@ without touching the GUI. Widget creation is tested via mock Qt objects where ne
 """
 
 import json
+import re
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -509,3 +510,22 @@ class TestMCPConfigSaveLogic:
             assert "mcps" not in saved
         finally:
             cfg_path.unlink(missing_ok=True)
+
+
+class TestUkrainianLocalisation:
+    """The personal Ukrainian build: every user-facing field label and
+    tooltip description must be Ukrainian, not English."""
+
+    CYRILLIC = re.compile(r"[А-Яа-яЇїІіЄєҐґ]")
+
+    def test_labels_are_ukrainian(self):
+        for fm in FIELD_METADATA:
+            assert self.CYRILLIC.search(fm.label), (
+                f"Label for '{fm.key}' is not Ukrainian: {fm.label!r}"
+            )
+
+    def test_descriptions_are_ukrainian(self):
+        for fm in FIELD_METADATA:
+            assert self.CYRILLIC.search(fm.description), (
+                f"Description for '{fm.key}' is not Ukrainian: {fm.description!r}"
+            )

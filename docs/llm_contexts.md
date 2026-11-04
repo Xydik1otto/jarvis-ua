@@ -174,6 +174,7 @@ Every distinct LLM call in Jarvis, what feeds it, what consumes it, and how it i
 
 - **Weather** ([src/jarvis/tools/builtin/weather.py](src/jarvis/tools/builtin/weather.py), ~line 60) — factory-dispatched. Place extractor model resolution: `tool_router_model → intent_judge_model → cfg.llm_chat_model` so small/warm models handle the parse without paging in the chat model. Parses location/time/unit from the query.
 - **Nutrition log_meal** ([src/jarvis/tools/builtin/nutrition/log_meal.py](src/jarvis/tools/builtin/nutrition/log_meal.py), lines 48 & 136) — factory-dispatched. Both the nutrition extractor and the follow-up generator use `cfg.llm_chat_model`. Extracts nutrients, confirms logging.
+- **askAi** ([src/jarvis/tools/builtin/ask_ai.py](src/jarvis/tools/builtin/ask_ai.py)) — factory-dispatched. One call per invocation, but NOT on the chat model: the user picks a target by name/alias, which is fuzzy-resolved against `cfg.ask_ai_targets` (catalogue-only; the model may never name a raw model string). The resolved catalogue model is called with `keep_alive: 0` so the second model unloads from VRAM right after answering (8 GB VRAM holds only one resident model). Returns the delegated answer as raw data for the main loop to phrase. Gated by `ask_ai_enabled` (default true); unknown model, empty prompt, or empty catalogue fail without an LLM call; timeout/empty response → honest failure. See [src/jarvis/tools/builtin/ask_ai.spec.md](src/jarvis/tools/builtin/ask_ai.spec.md).
 
 ---
 
@@ -196,6 +197,7 @@ Every distinct LLM call in Jarvis, what feeds it, what consumes it, and how it i
 | 12 | Planner (plan_query) | 1 | yes (planner_enabled) | LARGE/SMALL (tracks chat model) |
 | 13 | Plan step resolver | 0-N (SMALL only) | auto by size + plan | SMALL (via router chain) |
 | 14 | Tool-specific | per-tool | n/a | LARGE |
+| 15 | askAi (delegated question) | 0-1 per askAi call | gated by ask_ai_enabled | user-chosen catalogue model |
 
 ## Size-aware auto switches
 

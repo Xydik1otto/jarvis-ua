@@ -552,7 +552,7 @@ class TestProviderChoicePage:
             with patch("jarvis.config.default_config_path", return_value=cfg_path):
                 page = ProviderChoicePage()
             blob = " ".join(lbl.text().lower() for lbl in page.findChildren(QLabel))
-            assert "local" in blob and "network" in blob, (
+            assert "локальна" in blob and "мережі" in blob, (
                 "provider copy should make clear the OpenAI-compatible option "
                 "is also local"
             )
@@ -754,9 +754,9 @@ class TestOpenAICompatiblePage:
         """The status line reflects success vs failure honestly."""
         page = OpenAICompatiblePage()
         page._on_models_fetched(True, ["m1", "m2"])
-        assert "Connected" in page._connect_status.text() and "2" in page._connect_status.text()
+        assert "Підключено" in page._connect_status.text() and "2" in page._connect_status.text()
         page._on_models_fetched(False, [])
-        assert "Couldn't load models" in page._connect_status.text()
+        assert "Не вдалося завантажити моделі" in page._connect_status.text()
 
     def test_editing_base_url_refreshes_completeness(self, qapp):
         """Editing the base URL must re-evaluate the Next button: the base URL
@@ -1398,6 +1398,29 @@ class TestSearchProvidersPage:
             saved = _load_json(cfg_path)
             assert saved["ollama_chat_model"] == "gpt-oss:20b"
             assert saved["mcps"] == {"x": {}}
+        finally:
+            cfg_path.unlink(missing_ok=True)
+
+
+class TestUkrainianLocalisation:
+    """The personal Ukrainian build keeps the wizard chrome in Ukrainian."""
+
+    def test_wizard_button_labels_are_ukrainian(self, qapp):
+        """Navigation buttons read in Ukrainian, not English."""
+        import tempfile
+        from pathlib import Path
+        from PyQt6.QtWidgets import QWizard
+        from desktop_app.setup_wizard import SetupWizard
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("{}")
+            cfg_path = Path(f.name)
+        try:
+            with patch("jarvis.config.default_config_path", return_value=cfg_path):
+                wiz = SetupWizard()
+            assert "Далі" in wiz.button(QWizard.WizardButton.NextButton).text()
+            assert "Назад" in wiz.button(QWizard.WizardButton.BackButton).text()
+            assert "Запустити" in wiz.button(QWizard.WizardButton.FinishButton).text()
+            assert "Вихід" in wiz.button(QWizard.WizardButton.CancelButton).text()
         finally:
             cfg_path.unlink(missing_ok=True)
 

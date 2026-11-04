@@ -19,6 +19,7 @@ from .builtin.nutrition.delete_meal import DeleteMealTool
 from .builtin.refresh_mcp_tools import RefreshMCPToolsTool
 from .builtin.weather import WeatherTool
 from .builtin.launch_app import LaunchAppTool
+from .builtin.ask_ai import AskAiTool
 from .builtin.stop import StopTool
 from .builtin.tool_search import ToolSearchTool
 from .types import ToolExecutionResult
@@ -39,6 +40,7 @@ BUILTIN_TOOLS = {
     "refreshMCPTools": RefreshMCPToolsTool(),
     "getWeather": WeatherTool(),
     "launchApp": LaunchAppTool(),
+    "askAi": AskAiTool(),
     "stop": StopTool(),
     "toolSearchTool": ToolSearchTool(),
 }

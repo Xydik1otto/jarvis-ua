@@ -641,6 +641,27 @@ def get_default_config() -> Dict[str, Any]:
             "communication_style": "",
             "goals": "",
         },
+        # askAi tool: delegate a question to another locally installed model.
+        # Catalogue-only: the assistant may pick a target by name/alias, never
+        # a raw model string. Offline-first: Ollama models only.
+        "ask_ai_enabled": True,
+        "ask_ai_targets": [
+            {
+                "name": "DeepSeek Coder",
+                "aliases": ["діпсік", "дипсик", "deepseek", "deepseek coder"],
+                "model": "deepseek-coder-v2",
+            },
+            {
+                "name": "Qwen Coder",
+                "aliases": ["квін кодер", "qwen coder", "qwen2.5-coder"],
+                "model": "qwen2.5-coder:7b",
+            },
+            {
+                "name": "Qwen",
+                "aliases": ["квін", "qwen"],
+                "model": "qwen2.5:7b-instruct",
+            },
+        ],
     }
 
 

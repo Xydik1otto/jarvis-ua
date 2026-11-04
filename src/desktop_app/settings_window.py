@@ -98,7 +98,7 @@ def _dictation_hotkey_choices() -> list:
         ("ctrl+shift", format_hotkey_display("ctrl+shift")),
     ]
     return [
-        (val, f"{label} (default)" if val == default else label)
+        (val, f"{label} (за замовчуванням)" if val == default else label)
         for val, label in options
     ]
 
@@ -113,32 +113,32 @@ def _build_field_metadata() -> List[FieldMeta]:
 
     # --- LLM & AI Models ---
     model_choices = [(mid, info["name"]) for mid, info in SUPPORTED_CHAT_MODELS.items()]
-    f("ollama_chat_model", "Chat Model", "Primary LLM for conversations",
+    f("ollama_chat_model", "Модель чату", "Основна LLM-модель для розмов",
       "llm", "choice", choices=model_choices)
-    f("ollama_embed_model", "Embedding Model", "Model for text embeddings",
+    f("ollama_embed_model", "Embedding-модель", "Модель для векторних уявлень тексту",
       "llm", "str")
-    f("ollama_base_url", "Ollama URL", "Ollama server base URL",
+    f("ollama_base_url", "Адреса Ollama", "Базова адреса сервера Ollama",
       "llm", "str")
-    f("llm_chat_timeout_sec", "Chat Timeout", "Max seconds for chat responses",
+    f("llm_chat_timeout_sec", "Тайм-аут чату", "Максимальна кількість секунд для відповідей чату",
       "llm", "float", min_val=10, max_val=600, step=10, suffix="s")
-    f("llm_tools_timeout_sec", "Tools Timeout", "Max seconds for tool calls",
+    f("llm_tools_timeout_sec", "Тайм-аут інструментів", "Максимальна кількість секунд для викликів інструментів",
       "llm", "float", min_val=10, max_val=600, step=10, suffix="s")
-    f("llm_embedding_timeout_sec", "Embedding Timeout", "Max seconds for embeddings",
+    f("llm_embedding_timeout_sec", "Тайм-аут ембедингів", "Максимальна кількість секунд для ембедингів",
       "llm", "float", min_val=5, max_val=300, step=5, suffix="s")
-    f("llm_profile_select_timeout_sec", "Profile Select Timeout",
-      "Max seconds for profile selection",
+    f("llm_profile_select_timeout_sec", "Тайм-аут вибору профілю",
+      "Максимальна кількість секунд для вибору профілю",
       "llm", "float", min_val=5, max_val=120, step=5, suffix="s")
-    f("intent_judge_model", "Intent Judge Model",
-      "Model for intent classification",
+    f("intent_judge_model", "Модель визначення наміру",
+      "Модель для класифікації намірів",
       "llm", "choice", choices=model_choices)
-    f("intent_judge_timeout_sec", "Intent Judge Timeout",
-      "Max seconds for intent judgement",
+    f("intent_judge_timeout_sec", "Тайм-аут визначення наміру",
+      "Максимальна кількість секунд для оцінки наміру",
       "llm", "float", min_val=1, max_val=30, step=0.5, suffix="s")
-    f("llm_thinking_enabled", "Chat Thinking Mode",
-      "Let the chat model think/reason before answering (slower but may improve quality)",
+    f("llm_thinking_enabled", "Режим роздумів чату",
+      "Дозволити моделі чату роздумувати перед відповіддю (повільніше, але може підвищити якість)",
       "llm", "bool")
-    f("intent_judge_thinking_enabled", "Intent Judge Thinking Mode",
-      "Let the intent judge think before classifying (adds latency to wake detection)",
+    f("intent_judge_thinking_enabled", "Режим роздумів визначення наміру",
+      "Дозволити моделі наміру роздумувати перед класифікацією (додає затримку до розпізнавання активації)",
       "llm", "bool")
 
     # --- LLM Provider ---
@@ -146,240 +146,240 @@ def _build_field_metadata() -> List[FieldMeta]:
     # fields below are nullable: leaving them empty falls back to the Ollama
     # settings on the "LLM & AI Models" page, so a default (Ollama) install
     # never needs to touch this page.
-    f("llm_provider", "Provider", "Which local runtime serves the LLM",
+    f("llm_provider", "Провайдер", "Який локальний рушій обслуговує LLM",
       "llm_provider", "choice",
-      choices=[("ollama", "Ollama (local)"),
-               ("openai_compatible", "OpenAI-compatible server")])
-    f("llm_base_url", "Base URL",
-      "Provider API base URL (e.g. http://localhost:1234/v1 for LM Studio). "
-      "Leave empty to use the Ollama URL.",
+      choices=[("ollama", "Ollama (локально)"),
+               ("openai_compatible", "OpenAI-сумісний сервер")])
+    f("llm_base_url", "Базова адреса",
+      "Базова адреса API провайдера (напр. http://localhost:1234/v1 для LM Studio). "
+      "Залиш порожнім, щоб використовувати адресу Ollama.",
       "llm_provider", "str", nullable=True)
-    f("llm_api_key", "API Key",
-      "Bearer token for the provider, if it requires one. Leave empty for none.",
+    f("llm_api_key", "API-ключ",
+      "Bearer-токен для провайдера, якщо він його вимагає. Залиш порожнім, якщо не потрібен.",
       "llm_provider", "password", nullable=True)
-    f("llm_chat_model", "Chat Model",
-      "Model name the provider exposes. Leave empty to use the Ollama chat model.",
+    f("llm_chat_model", "Модель чату",
+      "Назва моделі у провайдера. Залиш порожнім, щоб використовувати модель чату Ollama.",
       "llm_provider", "str", nullable=True)
-    f("embedding_provider", "Embedding Provider",
-      "Runtime for embeddings. Leave on 'Same as chat provider' unless your "
-      "chat runtime has no embeddings endpoint (then route them to Ollama).",
+    f("embedding_provider", "Провайдер ембедингів",
+      "Рушій для ембедингів. Залиш «Як у провайдера чату», якщо рушій чату "
+      "має endpoint ембедингів (інакше направ їх на Ollama).",
       "llm_provider", "choice",
-      choices=[("", "Same as chat provider"),
-               ("ollama", "Ollama (local)"),
-               ("openai_compatible", "OpenAI-compatible server")])
-    f("embedding_base_url", "Embedding Base URL",
-      "Override base URL for embeddings. Leave empty to inherit from the "
-      "chat provider (or the Ollama URL).",
+      choices=[("", "Як у провайдера чату"),
+               ("ollama", "Ollama (локально)"),
+               ("openai_compatible", "OpenAI-сумісний сервер")])
+    f("embedding_base_url", "Базова адреса ембедингів",
+      "Перевизначена базова адреса для ембедингів. Залиш порожнім, щоб "
+      "успадкувати від провайдера чату (або адреси Ollama).",
       "llm_provider", "str", nullable=True)
-    f("embedding_api_key", "Embedding API Key",
-      "Override bearer token for embeddings. Leave empty to inherit the chat key.",
+    f("embedding_api_key", "API-ключ ембедингів",
+      "Перевизначений bearer-токен для ембедингів. Залиш порожнім, щоб успадкувати ключ чату.",
       "llm_provider", "password", nullable=True)
-    f("embedding_model", "Embedding Model",
-      "Embedding model name. Leave empty to use the Ollama embedding model.",
+    f("embedding_model", "Embedding-модель",
+      "Назва моделі ембедингів. Залиш порожнім, щоб використовувати модель Ollama.",
       "llm_provider", "str", nullable=True)
 
     # --- Text-to-Speech ---
-    f("tts_enabled", "Enable TTS", "Enable text-to-speech output",
+    f("tts_enabled", "Увімкнути TTS", "Увімкнути синтез мовлення",
       "tts", "bool")
-    f("tts_engine", "TTS Engine", "Speech synthesis engine",
-      "tts", "choice", choices=[("piper", "Piper (Neural)"), ("chatterbox", "Chatterbox (Voice Cloning)")])
-    f("tts_rate", "Speech Rate", "Words per minute (200 = normal)",
-      "tts", "int", min_val=80, max_val=400, step=10, suffix="WPM", nullable=True)
+    f("tts_engine", "Рушій TTS", "Рушій синтезу мовлення",
+      "tts", "choice", choices=[("piper", "Piper (нейронний)"), ("chatterbox", "Chatterbox (клонування голосу)")])
+    f("tts_rate", "Темп мовлення", "Слів за хвилину (200 = нормально)",
+      "tts", "int", min_val=80, max_val=400, step=10, suffix="сл/хв", nullable=True)
 
     # --- Piper TTS ---
-    f("tts_piper_length_scale", "Speed Scale",
-      "Speech speed: <1.0 faster, >1.0 slower",
+    f("tts_piper_length_scale", "Коефіцієнт швидкості",
+      "Швидкість мовлення: <1.0 швидше, >1.0 повільніше",
       "piper", "float", min_val=0.1, max_val=3.0, step=0.05)
-    f("tts_piper_noise_scale", "Audio Variation",
-      "Higher = more expressive",
+    f("tts_piper_noise_scale", "Варіативність звуку",
+      "Вище = більш виразно",
       "piper", "float", min_val=0.0, max_val=2.0, step=0.05)
-    f("tts_piper_noise_w", "Phoneme Width Variation",
-      "Higher = more lively rhythm",
+    f("tts_piper_noise_w", "Варіативність фонем",
+      "Вище = жвавіший ритм",
       "piper", "float", min_val=0.0, max_val=2.0, step=0.05)
-    f("tts_piper_sentence_silence", "Sentence Silence",
-      "Pause after each sentence",
+    f("tts_piper_sentence_silence", "Пауза між реченнями",
+      "Пауза після кожного речення",
       "piper", "float", min_val=0.0, max_val=2.0, step=0.05, suffix="s")
-    f("tts_piper_model_path", "Custom Voice Model",
-      "Path to .onnx voice model (leave empty for default)",
+    f("tts_piper_model_path", "Власна модель голосу",
+      "Шлях до голосової моделі .onnx (залиш порожнім для типової)",
       "piper", "str", nullable=True)
-    f("tts_piper_speaker", "Speaker ID",
-      "Speaker index for multi-speaker models",
+    f("tts_piper_speaker", "ID диктора",
+      "Індекс диктора для багатоголосих моделей",
       "piper", "int", min_val=0, max_val=99, nullable=True)
 
     # --- Chatterbox TTS ---
-    f("tts_chatterbox_device", "Device",
-      "Compute device for Chatterbox",
+    f("tts_chatterbox_device", "Пристрій",
+      "Обчислювальний пристрій для Chatterbox",
       "chatterbox", "choice",
-      choices=[("cuda", "CUDA (GPU)"), ("auto", "Auto"), ("cpu", "CPU")])
-    f("tts_chatterbox_exaggeration", "Exaggeration",
-      "Emotion exaggeration (0.0–1.0+)",
+      choices=[("cuda", "CUDA (GPU)"), ("auto", "Авто"), ("cpu", "CPU")])
+    f("tts_chatterbox_exaggeration", "Перебільшення",
+      "Перебільшення емоцій (0.0–1.0+)",
       "chatterbox", "float", min_val=0.0, max_val=2.0, step=0.05)
-    f("tts_chatterbox_cfg_weight", "CFG Weight",
-      "Quality/speed trade-off",
+    f("tts_chatterbox_cfg_weight", "Вага CFG",
+      "Баланс між якістю та швидкістю",
       "chatterbox", "float", min_val=0.0, max_val=2.0, step=0.05)
-    f("tts_chatterbox_audio_prompt", "Voice Clone Audio",
-      "Path to audio file for voice cloning (leave empty to disable)",
+    f("tts_chatterbox_audio_prompt", "Аудіо для клонування голосу",
+      "Шлях до аудіофайлу для клонування голосу (залиш порожнім, щоб вимкнути)",
       "chatterbox", "str", nullable=True)
 
     # --- Voice Input ---
-    f("voice_device", "Input Device",
-      "Microphone device (name or index). Leave empty for system default.",
+    f("voice_device", "Пристрій введення",
+      "Мікрофон (назва або індекс). Залиш порожнім для типового системного.",
       "voice_input", "device")
-    f("sample_rate", "Sample Rate",
-      "Audio sample rate in Hz",
+    f("sample_rate", "Частота дискретизації",
+      "Частота дискретизації звуку в Гц",
       "voice_input", "choice",
-      choices=[("16000", "16000 Hz"), ("44100", "44100 Hz"), ("48000", "48000 Hz")])
-    f("voice_min_energy", "Min Energy",
-      "Minimum audio energy to register voice",
+      choices=[("16000", "16000 Гц"), ("44100", "44100 Гц"), ("48000", "48000 Гц")])
+    f("voice_min_energy", "Мінімальна енергія",
+      "Мінімальна енергія звуку, щоб зарахувати голос",
       "voice_input", "float", min_val=0.0, max_val=1.0, step=0.005)
 
     # --- Wake Word ---
-    f("wake_word", "Wake Word",
-      "Primary wake word to activate Jarvis",
+    f("wake_word", "Слово-активатор",
+      "Основне слово-активатор для запуску Джарвіса",
       "wake", "str")
-    f("wake_fuzzy_ratio", "Fuzzy Match Ratio",
-      "How loosely to match the wake word (0.0–1.0)",
+    f("wake_fuzzy_ratio", "Нечіткий збіг",
+      "Наскільки нечітко порівнювати слово-активатор (0.0–1.0)",
       "wake", "float", min_val=0.5, max_val=1.0, step=0.01)
     # --- Whisper ---
-    f("whisper_model", "Model Size",
-      "Whisper model size (tiny/base/small/medium/large)",
+    f("whisper_model", "Розмір моделі",
+      "Розмір моделі Whisper (tiny/base/small/medium/large)",
       "whisper", "choice",
-      choices=[("tiny", "Tiny"), ("base", "Base"), ("small", "Small"),
-               ("medium", "Medium"), ("large-v3", "Large v3")])
-    f("whisper_backend", "Backend",
-      "Speech recognition backend",
+      choices=[("tiny", "Крихітна"), ("base", "Базова"), ("small", "Мала"),
+               ("medium", "Середня"), ("large-v3", "Large v3")])
+    f("whisper_backend", "Рушій",
+      "Рушій розпізнавання мовлення",
       "whisper", "choice",
-      choices=[("auto", "Auto"), ("mlx", "MLX (Apple Silicon)"),
+      choices=[("auto", "Авто"), ("mlx", "MLX (Apple Silicon)"),
                ("faster-whisper", "Faster Whisper")])
-    f("whisper_device", "Compute Device",
-      "Device for Whisper inference",
+    f("whisper_device", "Обчислювальний пристрій",
+      "Пристрій для інференсу Whisper",
       "whisper", "choice",
-      choices=[("auto", "Auto"), ("cuda", "CUDA (GPU)"), ("cpu", "CPU")])
-    f("whisper_compute_type", "Compute Type",
-      "Quantisation level for inference",
+      choices=[("auto", "Авто"), ("cuda", "CUDA (GPU)"), ("cpu", "CPU")])
+    f("whisper_compute_type", "Тип обчислень",
+      "Рівень квантизації для інференсу",
       "whisper", "choice",
-      choices=[("int8", "INT8 (Fast)"), ("float16", "Float16"), ("float32", "Float32")])
-    f("whisper_vad", "Use VAD Filter",
-      "Filter audio with VAD before transcription",
+      choices=[("int8", "INT8 (швидко)"), ("float16", "Float16"), ("float32", "Float32")])
+    f("whisper_vad", "Фільтр VAD",
+      "Фільтрувати звук через VAD перед транскрипцією",
       "whisper", "bool")
-    f("whisper_min_confidence", "Min Confidence",
-      "Filter low-confidence segments (hallucination guard)",
+    f("whisper_min_confidence", "Мінімальна впевненість",
+      "Відкидувати сегменти з низькою впевненістю (захист від галюцинацій)",
       "whisper", "float", min_val=0.0, max_val=1.0, step=0.05)
-    f("whisper_no_speech_threshold", "No-Speech Threshold",
-      "Reject segments where no_speech_prob is at or above this value (filters hallucinations during silence)",
+    f("whisper_no_speech_threshold", "Поріг тиші",
+      "Відкидувати сегменти, де no_speech_prob не нижче цього значення (фільтрує галюцинації під час тиші)",
       "whisper", "float", min_val=0.0, max_val=1.0, step=0.05)
 
     # --- VAD ---
-    f("vad_enabled", "Enable VAD",
-      "Use Voice Activity Detection",
+    f("vad_enabled", "Увімкнути VAD",
+      "Використовувати виявлення голосу (VAD)",
       "vad", "bool")
-    f("vad_aggressiveness", "Aggressiveness",
-      "VAD aggressiveness (0=least, 3=most aggressive)",
+    f("vad_aggressiveness", "Агресивність",
+      "Агресивність VAD (0=наймякша, 3=найагресивніша)",
       "vad", "int", min_val=0, max_val=3)
-    f("endpoint_silence_ms", "Endpoint Silence",
-      "Silence duration to end an utterance",
+    f("endpoint_silence_ms", "Тиша для завершення",
+      "Тривалість тиші, щоб завершити фразу",
       "vad", "int", min_val=100, max_val=5000, step=50, suffix="ms")
-    f("max_utterance_ms", "Max Utterance",
-      "Maximum single utterance duration",
+    f("max_utterance_ms", "Максимальна фраза",
+      "Максимальна тривалість однієї фрази",
       "vad", "int", min_val=1000, max_val=60000, step=1000, suffix="ms")
-    f("tts_max_utterance_ms", "Max Utterance (During TTS)",
-      "Shorter timeout during TTS for quick stop detection",
+    f("tts_max_utterance_ms", "Максимальна фраза під час TTS",
+      "Коротший тайм-аут під час TTS для швидкого виявлення зупинки",
       "vad", "int", min_val=500, max_val=10000, step=500, suffix="ms")
 
     # --- Timing & Windows ---
-    f("voice_block_seconds", "Block Duration",
-      "Audio block size for processing",
+    f("voice_block_seconds", "Розмір блоку звуку",
+      "Розмір блоку звуку для обробки",
       "timing", "float", min_val=0.5, max_val=10.0, step=0.5, suffix="s")
-    f("voice_collect_seconds", "Collect Window",
-      "Time to collect speech after wake word",
+    f("voice_collect_seconds", "Вікно збору мовлення",
+      "Час на збір мовлення після слова-активатора",
       "timing", "float", min_val=1.0, max_val=30.0, step=0.5, suffix="s")
-    f("voice_max_collect_seconds", "Max Collect Window",
-      "Maximum time to collect continuous speech",
+    f("voice_max_collect_seconds", "Максимальне вікно збору",
+      "Максимальний час збору безперервного мовлення",
       "timing", "float", min_val=10.0, max_val=600.0, step=10, suffix="s")
-    f("hot_window_enabled", "Hot Window",
-      "Enable follow-up window after responses",
+    f("hot_window_enabled", "Гаряче вікно",
+      "Увімкнути вікно для уточнення після відповідей",
       "timing", "bool")
-    f("hot_window_seconds", "Hot Window Duration",
-      "Duration of follow-up window",
+    f("hot_window_seconds", "Тривалість гарячого вікна",
+      "Тривалість вікна для уточнення",
       "timing", "float", min_val=1.0, max_val=30.0, step=0.5, suffix="s")
-    f("transcript_buffer_duration_sec", "Transcript Buffer",
-      "Duration of rolling transcript history for intent judging",
+    f("transcript_buffer_duration_sec", "Буфер транскрипту",
+      "Тривалість історії транскрипту для визначення наміру",
       "timing", "float", min_val=10, max_val=600, step=10, suffix="s")
 
     # --- Memory & Dialogue ---
-    f("dialogue_memory_timeout", "Memory & Diary Window",
-      "Duration for dialogue memory and forced diary updates",
+    f("dialogue_memory_timeout", "Вікно пам'яті та щоденника",
+      "Тривалість пам'яті діалогу та примусових оновлень щоденника",
       "memory", "float", min_val=30, max_val=3600, step=30, suffix="s")
-    f("memory_enrichment_max_results", "Enrichment Results",
-      "Max memory results for context enrichment",
+    f("memory_enrichment_max_results", "Результати збагачення",
+      "Максимум результатів пам'яті для збагачення контексту",
       "memory", "int", min_val=1, max_val=50)
-    f("memory_enrichment_source", "Enrichment Source",
-      "Which memory system enriches replies: all (diary + graph), diary only, or graph only",
-      "memory", "choice", choices=[("diary", "Diary only"), ("graph", "Graph only"), ("all", "All (diary + graph)")])
-    f("tool_carryover_max_turns", "Tool Carryover Turns",
-      "How many prior replies' tool results to keep visible for follow-up questions",
+    f("memory_enrichment_source", "Джерело збагачення",
+      "Яка система пам'яті збагачує відповіді: уся (щоденник + граф), лише щоденник або лише граф",
+      "memory", "choice", choices=[("diary", "Лише щоденник"), ("graph", "Лише граф"), ("all", "Усе (щоденник + граф)")])
+    f("tool_carryover_max_turns", "Перенесення результатів інструментів",
+      "Скільки останніх відповідей із результатами інструментів тримати видимими для уточнень",
       "memory", "int", min_val=0, max_val=10)
-    f("tool_carryover_per_entry_chars", "Tool Carryover Length",
-      "Chars kept per carried-over tool result (UNTRUSTED fence markers preserved)",
+    f("tool_carryover_per_entry_chars", "Довжина перенесених результатів",
+      "Символів на кожен перенесений результат інструменту (маркери UNTRUSTED зберігаються)",
       "memory", "int", min_val=200, max_val=8000, step=100)
-    f("agentic_max_turns", "Agentic Max Turns",
-      "Maximum turns in agentic tool-use loops",
+    f("agentic_max_turns", "Максимум кроків агента",
+      "Максимальна кількість кроків у циклах використання інструментів",
       "memory", "int", min_val=1, max_val=30)
 
     # --- Location ---
-    f("location_enabled", "Enable Location",
-      "Allow location-aware responses",
+    f("location_enabled", "Увімкнути локацію",
+      "Дозволити відповіді з урахуванням локації",
       "location", "bool")
-    f("location_auto_detect", "Auto-Detect",
-      "Automatically detect location from IP",
+    f("location_auto_detect", "Автовизначення",
+      "Автоматично визначати локацію за IP",
       "location", "bool")
-    f("location_cache_minutes", "Cache Duration",
-      "Minutes to cache location data",
-      "location", "int", min_val=1, max_val=1440, step=5, suffix="min")
-    f("location_ip_address", "IP Address Override",
-      "Manual IP for geolocation (leave empty for auto)",
+    f("location_cache_minutes", "Час кешування",
+      "Хвилини кешування даних локації",
+      "location", "int", min_val=1, max_val=1440, step=5, suffix="хв")
+    f("location_ip_address", "IP-адреса вручну",
+      "Ручна IP-адреса для геолокації (залиш порожнім для авто)",
       "location", "str", nullable=True)
-    f("location_cgnat_resolve_public_ip", "CGNAT Resolve",
-      "Resolve public IP when behind CGNAT",
+    f("location_cgnat_resolve_public_ip", "Визначення за CGNAT",
+      "Визначати публічну IP-адресу, коли мережа за CGNAT",
       "location", "bool")
 
     # --- Features ---
-    f("web_search_enabled", "Web Search",
-      "Enable web search tool",
+    f("web_search_enabled", "Пошук в інтернеті",
+      "Увімкнути інструмент веб-пошуку",
       "features", "bool")
-    f("brave_search_api_key", "Brave Search API Key",
-      "Optional. When set, Brave is used as the primary fallback if DuckDuckGo "
-      "is blocked. Free tier: 2,000 queries/month at api.search.brave.com.",
+    f("brave_search_api_key", "API-ключ Brave Search",
+      "Необов'язково. Якщо задано, Brave стає основним резервом, коли "
+      "DuckDuckGo заблоковано. Безкоштовний ліміт: 2000 запитів/міс на api.search.brave.com.",
       "features", "str", nullable=True)
-    f("wikipedia_fallback_enabled", "Wikipedia Fallback",
-      "Use Wikipedia as a last-resort source when other search engines fail. "
-      "No key, no account, privacy-light.",
+    f("wikipedia_fallback_enabled", "Резерв Wikipedia",
+      "Використовувати Wikipedia як джерело останнього шансу, коли інші "
+      "пошуковики не спрацювали. Без ключа й акаунта, майже без передачі даних.",
       "features", "bool")
-    f("tune_enabled", "Startup Tune",
-      "Play startup sound",
+    f("tune_enabled", "Стартова мелодія",
+      "Програвати звук під час запуску",
       "features", "bool")
-    f("dictation_enabled", "Dictation Mode",
-      "Hold a hotkey to record speech, release to paste transcription into any app",
+    f("dictation_enabled", "Режим диктування",
+      "Затисни гарячу клавішу, щоб записати мовлення; відпусти, щоб вставити транскрипцію в будь-яку програму",
       "features", "bool")
-    f("dictation_hotkey", "Dictation Hotkey",
-      "Key combination to hold for dictation. Double-tap for hands-free mode.",
+    f("dictation_hotkey", "Гаряча клавіша диктування",
+      "Комбінація клавіш, яку затискаєш під час диктування. Подвійне натискання вмикає режим без рук.",
       "features", "choice", choices=_dictation_hotkey_choices())
-    f("dictation_filler_removal", "Filler Word Removal",
-      "Use the local LLM to remove filler words (um, uh, like) from dictation output",
+    f("dictation_filler_removal", "Вилучення слів-паразитів",
+      "Використовувати локальну LLM, щоб вилучати слова-паразити з результату диктування",
       "features", "bool")
-    f("dictation_thinking_enabled", "Dictation Thinking Mode",
-      "Let the LLM think when cleaning dictation (adds latency after each dictation)",
+    f("dictation_thinking_enabled", "Режим роздумів для диктування",
+      "Дозволити LLM роздумувати під час чистки диктування (додає затримку після кожного диктування)",
       "features", "bool")
-    f("dictation_custom_dictionary", "Custom Dictionary",
-      "Correction rules for dictation. Use 'wrong -> right' format (e.g. 'Jarvice -> Jarvis')",
+    f("dictation_custom_dictionary", "Власний словник",
+      "Правила виправлення для диктування. Формат 'неправильно -> правильно' (напр. 'Джарвес -> Джарвіс')",
       "features", "list")
 
     # --- Advanced ---
-    f("echo_energy_threshold", "Echo Energy Threshold",
-      "Threshold for echo detection",
+    f("echo_energy_threshold", "Поріг енергії луни",
+      "Поріг для виявлення луни",
       "advanced", "float", min_val=0.0, max_val=10.0, step=0.1)
-    f("echo_tolerance", "Echo Tolerance",
-      "Time tolerance for echo detection",
+    f("echo_tolerance", "Допуск луни",
+      "Допуск за часом для виявлення луни",
       "advanced", "float", min_val=0.0, max_val=2.0, step=0.05, suffix="s")
 
     return fields
@@ -397,7 +397,7 @@ def get_input_devices() -> List[tuple[str, str]]:
 
     Returns [("", "System Default")] if sounddevice is not available.
     """
-    devices: List[tuple[str, str]] = [("", "🔧 System Default")]
+    devices: List[tuple[str, str]] = [("", "🔧 Системний типовий")]
     try:
         import sounddevice as sd
         for idx, dev in enumerate(sd.query_devices()):
@@ -406,7 +406,7 @@ def get_input_devices() -> List[tuple[str, str]]:
             except Exception:
                 max_in = 0
             if max_in > 0:
-                name = dev.get("name", f"Device {idx}")
+                name = dev.get("name", f"Пристрій {idx}")
                 devices.append((str(idx), f"🎤 {name}"))
     except Exception as e:
         debug_log(f"could not enumerate audio devices: {e}", "settings")
@@ -631,7 +631,7 @@ class SettingsWindow(QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        check = QCheckBox("Custom")
+        check = QCheckBox("Власне значення")
         spin = QSpinBox()
         spin.setMinimum(int(fm.min_val) if fm.min_val is not None else 0)
         spin.setMaximum(int(fm.max_val) if fm.max_val is not None else 999999)
@@ -694,8 +694,8 @@ class SettingsWindow(QDialog):
 
         def _on_add():
             text, ok = QInputDialog.getText(
-                self, f"Add {fm.label}",
-                "Enter value (e.g. 'wrong -> right'):",
+                self, f"Додати: {fm.label}",
+                "Введи значення (напр. 'неправильно -> правильно'):",
             )
             if ok and text.strip():
                 list_w.addItem(text.strip())
@@ -705,8 +705,8 @@ class SettingsWindow(QDialog):
             if item is None:
                 return
             text, ok = QInputDialog.getText(
-                self, f"Edit {fm.label}",
-                "Edit value:",
+                self, f"Редагувати: {fm.label}",
+                "Відредагуй значення:",
                 text=item.text(),
             )
             if ok and text.strip():
@@ -740,8 +740,8 @@ class SettingsWindow(QDialog):
 
         # Header
         desc = QLabel(
-            "MCP (Model Context Protocol) servers give Jarvis extra tools — "
-            "file access, web search, databases, and more."
+            "MCP-сервери (Model Context Protocol) дають Джарвіс додаткові "
+            "інструменти: доступ до файлів, веб-пошук, бази даних тощо."
         )
         desc.setWordWrap(True)
         desc.setStyleSheet("color: #a1a1aa; font-size: 13px;")
@@ -823,12 +823,12 @@ class SettingsWindow(QDialog):
         cfg = self._mcp_configs[name]
         command = cfg.get("command", "")
         args = " ".join(str(a) for a in cfg.get("args", []))
-        env_keys = ", ".join(cfg.get("env", {}).keys()) if cfg.get("env") else "none"
+        env_keys = ", ".join(cfg.get("env", {}).keys()) if cfg.get("env") else "немає"
         self._mcp_detail.setText(
-            f"<b>Name:</b> {name}<br>"
-            f"<b>Command:</b> {command}<br>"
-            f"<b>Args:</b> {args}<br>"
-            f"<b>Env vars:</b> {env_keys}"
+            f"<b>Назва:</b> {name}<br>"
+            f"<b>Команда:</b> {command}<br>"
+            f"<b>Аргументи:</b> {args}<br>"
+            f"<b>Змінні оточення:</b> {env_keys}"
         )
 
     def _on_mcp_add_catalogue(self) -> None:
@@ -1056,9 +1056,9 @@ class _MCPCatalogueDialog(QDialog):
 
         # Node.js availability warning
         node_warning = QLabel(
-            "⚠️  <b>Node.js not found.</b> Most MCP servers require Node.js. "
-            "<a href='https://nodejs.org/' style='color: #f59e0b;'>Download Node.js</a> "
-            "and restart Jarvis to use them."
+            "⚠️  <b>Node.js не знайдено.</b> Більшість MCP-серверів потребує Node.js. "
+            "<a href='https://nodejs.org/' style='color: #f59e0b;'>Завантаж Node.js</a> "
+            "і перезапусти Джарвіса, щоб ними користуватися."
         )
         node_warning.setOpenExternalLinks(True)
         node_warning.setWordWrap(True)
@@ -1107,7 +1107,7 @@ class _MCPCatalogueDialog(QDialog):
             text_layout.addWidget(desc_label)
 
             if entry.needs_api_key:
-                key_label = QLabel(f"🔑 Requires {entry.api_key_env_var}")
+                key_label = QLabel(f"🔑 Потрібен {entry.api_key_env_var}")
                 key_label.setStyleSheet("color: #fbbf24; font-size: 11px;")
                 text_layout.addWidget(key_label)
 
@@ -1137,8 +1137,8 @@ class _MCPCatalogueDialog(QDialog):
             if entry.needs_api_key and entry.api_key_env_var:
                 key, ok = QInputDialog.getText(
                     self,
-                    f"🔑 {entry.display_name} API Key",
-                    f"Enter your {entry.api_key_env_var}:\n"
+                    f"🔑 API-ключ {entry.display_name}",
+                    f"Введи свій {entry.api_key_env_var}:\n"
                     f"({entry.api_key_hint or ''})",
                 )
                 if ok and key.strip():
@@ -1200,22 +1200,22 @@ class _MCPEditDialog(QDialog):
         self._name_edit.setPlaceholderText("напр. filesystem, my-server")
         if self._is_edit:
             self._name_edit.setEnabled(False)
-        form.addRow("Name", self._name_edit)
+        form.addRow("Назва", self._name_edit)
 
         self._command_edit = QLineEdit(str(config.get("command", "")))
         self._command_edit.setPlaceholderText("напр. npx, node, python")
-        form.addRow("Command", self._command_edit)
+        form.addRow("Команда", self._command_edit)
 
         self._args_edit = QLineEdit(" ".join(str(a) for a in config.get("args", [])))
-        self._args_edit.setPlaceholderText("e.g. -y @modelcontextprotocol/server-filesystem ~")
+        self._args_edit.setPlaceholderText("напр. -y @modelcontextprotocol/server-filesystem ~")
         self._args_edit.setToolTip("Аргументи через пробіл")
-        form.addRow("Args", self._args_edit)
+        form.addRow("Аргументи", self._args_edit)
 
         env = config.get("env") or {}
         env_str = " ".join(f"{k}={v}" for k, v in env.items())
         self._env_edit = QLineEdit(env_str)
         self._env_edit.setPlaceholderText("напр. API_KEY=abc123 (KEY=VALUE через пробіл)")
-        form.addRow("Env vars", self._env_edit)
+        form.addRow("Змінні оточення", self._env_edit)
 
         layout.addLayout(form)
         layout.addStretch()
