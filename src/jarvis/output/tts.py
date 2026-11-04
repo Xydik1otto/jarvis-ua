@@ -119,9 +119,15 @@ def normalise_for_restricted_voice(text: str, allowed: set) -> str:
     if not allowed:
         return text
 
-    # Numbers first, before we lose the digits: "04:29" -> "нуль чотири : ..."
+    # Numbers first, before we lose the digits: "04:29" -> "нуль чотири : ...".
+    # Runs with a leading zero (codes, timestamps, phone fragments) read
+    # digit-by-digit; plain multi-digit numbers read as whole numbers
+    # ("42" -> "сорок два").
     def _expand(m):
-        return " ".join(_uk_number_to_words(int(d)) for d in m.group())
+        digits = m.group()
+        if len(digits) > 1 and digits[0] != "0":
+            return _uk_number_to_words(int(digits))
+        return " ".join(_uk_number_to_words(int(d)) for d in digits)
 
     text = re.sub(r"\d+", _expand, text)
     text = text.lower()

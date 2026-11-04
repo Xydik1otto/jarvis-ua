@@ -532,7 +532,8 @@ class TestMenuIntegration:
         import inspect
         from src.desktop_app.app import JarvisSystemTray
         source = inspect.getsource(JarvisSystemTray.create_menu)
-        assert "Dictation History" in source
+        # The tray is Ukrainian-localised in this build.
+        assert "Історія диктування" in source
         assert "dictation_history_action" in source
 
     def test_show_dictation_history_method_exists(self):
