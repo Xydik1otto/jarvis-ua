@@ -222,7 +222,7 @@ def _check_and_update_diary(
 
             if verbose:
                 try:
-                    print("📝 Updating your diary. Please wait… (don't press Ctrl+C again)", file=sys.stderr, flush=True)
+                    print("📝 Оновлюю твій щоденник. Зачекай… (не натискай Ctrl+C ще раз)", file=sys.stderr, flush=True)
                 except Exception:
                     pass
 
@@ -313,14 +313,14 @@ def main() -> None:
     db = Database(cfg.db_path, cfg.sqlite_vss_path)
 
     debug_log("daemon started", "jarvis")
-    print("✓ Daemon started", flush=True)
-    print(f"🧠 Using chat model: {cfg.llm_chat_model}", flush=True)
-    print(f"🎤 Using whisper model: {cfg.whisper_model}", flush=True)
+    print("✓ Демон запущено", flush=True)
+    print(f"🧠 Чат-модель: {cfg.llm_chat_model}", flush=True)
+    print(f"🎤 Модель Whisper: {cfg.whisper_model}", flush=True)
 
     # MCP preflight: discover and cache external MCP tools
     mcps = getattr(cfg, "mcps", {}) or {}
     if mcps:
-        print(f"📡 Discovering MCP tools from {len(mcps)} server(s)...", flush=True)
+        print(f"📡 Шукаю MCP-інструменти на {len(mcps)} сервері(ах)...", flush=True)
         try:
             mcp_tools, mcp_errors = initialize_mcp_tools(mcps, verbose=False)
 
@@ -336,26 +336,26 @@ def main() -> None:
             for server_name in mcps.keys():
                 count = len(tools_by_server.get(server_name, []))
                 if count > 0:
-                    print(f"  ✅ {server_name}: {count} tools available", flush=True)
+                    print(f"  ✅ {server_name}: доступно інструментів: {count}", flush=True)
                 elif server_name in mcp_errors:
                     print(f"  ❌ {server_name}: {mcp_errors[server_name]}", flush=True)
                 else:
-                    print(f"  ⚠️ {server_name}: no tools discovered", flush=True)
+                    print(f"  ⚠️ {server_name}: інструментів не знайдено", flush=True)
 
             debug_log(f"MCP tools cached: {len(mcp_tools)} total", "mcp")
         except Exception as e:
             debug_log(f"MCP discovery failed: {e}", "mcp")
-            print(f"  ⚠️ MCP discovery failed: {e}", flush=True)
+            print(f"  ⚠️ Помилка пошуку MCP: {e}", flush=True)
     else:
-        print("📡 No MCP servers configured", flush=True)
+        print("📡 MCP-сервери не налаштовано", flush=True)
 
     # Initialize dialogue memory with timeout
-    print("💾 Initializing dialogue memory...", flush=True)
+    print("💾 Ініціалізую пам'ять діалогу...", flush=True)
     _global_dialogue_memory = DialogueMemory(
         inactivity_timeout=cfg.dialogue_memory_timeout,
         max_interactions=20
     )
-    print("✓ Dialogue memory initialized", flush=True)
+    print("✓ Пам'ять діалогу ініціалізовано", flush=True)
 
     # Wire the conversation-scoped warm-profile cache to graph mutations.
     # When the User or Directives branch is mutated mid-conversation, the
@@ -433,21 +433,21 @@ def main() -> None:
             location_cache_minutes=cfg.location_cache_minutes,
         )
         if location_context == "Location: Unknown":
-            print("📍 Location detection not available", flush=True)
+            print("📍 Визначення локації недоступне", flush=True)
             if not is_location_available():
-                print("     GeoLite2 database not found. Download from:", flush=True)
+                print("     Базу GeoLite2 не знайдено. Завантаж із:", flush=True)
                 print("     https://www.maxmind.com/en/geolite2/signup", flush=True)
             else:
-                print("     Could not detect public IP address.", flush=True)
-                print("     Configure 'location_ip_address' in config.json", flush=True)
-                print("     or run the setup wizard to configure location.", flush=True)
+                print("     Не вдалося визначити публічну IP-адресу.", flush=True)
+                print("     Задай 'location_ip_address' у config.json", flush=True)
+                print("     або запусти майстер налаштувань для локації.", flush=True)
         else:
             print(f"📍 {location_context}", flush=True)
     else:
-        print("📍 Location services disabled", flush=True)
+        print("📍 Служби локації вимкнено", flush=True)
 
     # Initialize TTS
-    print(f"🔊 Initializing TTS engine ({cfg.tts_engine})...", flush=True)
+    print(f"🔊 Ініціалізую рушій TTS ({cfg.tts_engine})...", flush=True)
     tts = create_tts_engine(
         engine=cfg.tts_engine,
         enabled=cfg.tts_enabled,
@@ -469,16 +469,16 @@ def main() -> None:
     _global_tts_engine = tts  # Expose for face widget speaking animation
     if tts.enabled:
         tts.start()
-        print("✓ TTS engine started", flush=True)
+        print("✓ Рушій TTS запущено", flush=True)
     else:
-        print("  TTS disabled", flush=True)
+        print("  TTS вимкнено", flush=True)
 
     # Initialize voice listening (only if dependencies available)
-    print("🎤 Initializing voice listener (this may take a moment to load Whisper model)...", flush=True)
+    print("🎤 Ініціалізую голосовий слухач (завантаження моделі Whisper може зайняти час)...", flush=True)
     voice_thread: Optional[threading.Thread] = None
     voice_thread = VoiceListener(db, cfg, tts, _global_dialogue_memory)
     voice_thread.start()
-    print("✓ Voice listener thread started (loading Whisper model in background)", flush=True)
+    print("✓ Потік голосового слухача запущено (модель Whisper вантажиться у фоні)", flush=True)
 
     # Initialize dictation engine (hold-to-dictate)
     dictation = None
@@ -534,12 +534,23 @@ def main() -> None:
             if dictation._started:
                 from jarvis.dictation.dictation_engine import format_hotkey_display
                 hotkey_display = format_hotkey_display(cfg.dictation_hotkey)
-                print(f"🎙️ Dictation enabled (hold {hotkey_display} to dictate)", flush=True)
+                print(f"🎙️ Диктування увімкнено (утримуй {hotkey_display} для диктування)", flush=True)
         except Exception as e:
             debug_log(f"dictation engine init failed: {e}", "dictation")
-            print(f"  ⚠ Dictation not available: {e}", flush=True)
+            print(f"  ⚠ Диктування недоступне: {e}", flush=True)
     else:
-        print("🎙️ Dictation disabled", flush=True)
+        print("🎙️ Диктування вимкнено", flush=True)
+
+    # Game mode: watch for a running game and free GPU VRAM for it.
+    game_monitor = None
+    if getattr(cfg, "game_mode_enabled", True):
+        try:
+            from jarvis.game_mode import GameModeMonitor
+            game_monitor = GameModeMonitor(cfg)
+            game_monitor.start()
+            print("🎮 Ігровий режим активний (звільняю VRAM, коли запущено гру)", flush=True)
+        except Exception as e:
+            debug_log(f"game mode monitor init failed: {e}", "game")
 
     # Periodic diary update checking
     last_diary_check = time.time()
@@ -590,10 +601,17 @@ def main() -> None:
     except KeyboardInterrupt:
         debug_log("daemon received KeyboardInterrupt", "jarvis")
     finally:
-        print("🔄 Daemon shutting down - saving memory...", flush=True)
+        print("🔄 Демон завершує роботу — зберігаю пам'ять...", flush=True)
         debug_log("daemon finally block starting - performing cleanup", "jarvis")
 
-        # Clean shutdown - stop dictation first
+        # Clean shutdown - stop game-mode monitor first
+        if game_monitor is not None:
+            try:
+                game_monitor.stop()
+            except Exception:
+                pass
+
+        # Stop dictation next
         if dictation is not None:
             debug_log("stopping dictation engine...", "jarvis")
             dictation.stop()
@@ -610,22 +628,22 @@ def main() -> None:
 
         # Final diary update before shutdown
         debug_log("performing final diary update (force=True)...", "jarvis")
-        print("📝 Updating diary before shutdown...", flush=True)
+        print("📝 Оновлюю щоденник перед вимкненням...", flush=True)
 
         # Check dialogue memory status
         if _global_dialogue_memory is None:
-            print("⚠️ Dialogue memory is None - nothing to save", flush=True)
+            print("⚠️ Пам'ять діалогу порожня — нема чого зберігати", flush=True)
         else:
             # Display-only count; actual save uses the atomic snapshot path.
             pending = _global_dialogue_memory.get_pending_chunks()
-            print(f"💬 Found {len(pending)} pending conversation chunks", flush=True)
+            print(f"💬 Знайдено незбережених фрагментів розмови: {len(pending)}", flush=True)
 
         # Use callbacks if they were set by desktop app (for live UI updates in bundled mode)
         # Use IPC (stdout events) if callbacks not set (subprocess mode)
         use_callbacks = any(_diary_update_callbacks.values())
         use_ipc = not use_callbacks  # Subprocess mode - emit events to stdout
         _check_and_update_diary(db, cfg, verbose=True, force=True, timeout_sec=SHUTDOWN_DIARY_TIMEOUT_SEC, use_callbacks=use_callbacks, use_ipc=use_ipc)
-        print("✅ Diary update complete", flush=True)
+        print("✅ Оновлення щоденника завершено", flush=True)
         debug_log("diary update complete", "jarvis")
 
         if tts is not None:
@@ -654,7 +672,7 @@ def main() -> None:
             _warm_profile_graph_listener = None
 
         debug_log("daemon stopped", "jarvis")
-        print("👋 Daemon stopped", flush=True)
+        print("👋 Демон зупинено", flush=True)
 
 
 if __name__ == "__main__":

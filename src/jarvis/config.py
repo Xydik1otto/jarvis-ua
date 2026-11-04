@@ -147,6 +147,7 @@ class Settings:
     whisper_backend: str  # "auto", "mlx", or "faster-whisper"
     whisper_device: str  # "cuda", "auto", or "cpu" (only for faster-whisper)
     whisper_compute_type: str
+    whisper_language: str  # ISO-639-1 hint (e.g. "uk"); "" = auto-detect per utterance
     whisper_vad: bool
     whisper_min_confidence: float
     whisper_no_speech_threshold: float
@@ -269,6 +270,21 @@ class Settings:
 
     # MCP Integration
     mcps: Dict[str, Any]
+
+    # launchApp catalogue: list of {name, aliases[], command, needs_query?}.
+    # The launchApp tool only ever runs a command from this list.
+    launch_targets: list
+
+    # Game mode: when a game is running, unload the GPU chat model after each
+    # use (keep_alive: 0) so it doesn't starve the game of VRAM.
+    game_mode_enabled: bool
+    game_mode_poll_sec: float
+    game_process_names: list
+
+    # Explicit, user-set personalisation always injected into the system
+    # prompt: {communication_style, goals}. Reliable baseline that does not
+    # depend on the learned graph/diary extraction.
+    user_profile: Dict[str, Any]
 
 
 
@@ -495,6 +511,7 @@ def get_default_config() -> Dict[str, Any]:
         "whisper_backend": "auto",  # "auto" (MLX on Apple Silicon, else faster-whisper), "mlx", or "faster-whisper"
         "whisper_device": "auto",  # "cuda" (recommended if available), "auto", or "cpu" (only for faster-whisper)
         "whisper_compute_type": "int8",
+        "whisper_language": "uk",  # Pin transcription to Ukrainian; "" = auto-detect (drifts between languages)
         "whisper_vad": True,
         "whisper_min_confidence": 0.3,  # Filter low-confidence segments (hallucinations)
         "whisper_no_speech_threshold": 0.5,  # Hard cutoff: reject segments where no_speech_prob >= this
@@ -600,6 +617,30 @@ def get_default_config() -> Dict[str, Any]:
 
         # MCP Integration (external servers Jarvis can use). No defaults.
         "mcps": {},
+        # launchApp catalogue. Seeded with web targets that work everywhere;
+        # add local apps/games/music (exe paths or protocols like
+        # steam://rungameid/<id>, spotify:) per machine.
+        "launch_targets": [
+            {
+                "name": "YouTube",
+                "aliases": ["ютуб", "юутуб", "youtube", "відео на ютубі"],
+                "command": "https://www.youtube.com/results?search_query={query}",
+                "needs_query": True,
+            },
+            {
+                "name": "Google",
+                "aliases": ["гугл", "google", "пошук в інтернеті"],
+                "command": "https://www.google.com/search?q={query}",
+                "needs_query": True,
+            },
+        ],
+        "game_mode_enabled": True,
+        "game_mode_poll_sec": 5.0,
+        "game_process_names": [],
+        "user_profile": {
+            "communication_style": "",
+            "goals": "",
+        },
     }
 
 
@@ -728,6 +769,7 @@ def load_settings() -> Settings:
     if whisper_device not in ("cuda", "auto", "cpu"):
         whisper_device = "auto"
     whisper_compute_type = str(merged.get("whisper_compute_type", "int8"))
+    whisper_language = str(merged.get("whisper_language", "uk")).strip()
     whisper_vad = bool(merged.get("whisper_vad", True))
     voice_min_energy = float(merged.get("voice_min_energy", 0.02))
     vad_enabled = bool(merged.get("vad_enabled", True))
@@ -816,6 +858,13 @@ def load_settings() -> Settings:
     raw_dict = merged.get("dictation_custom_dictionary", [])
     dictation_custom_dictionary = list(raw_dict) if isinstance(raw_dict, list) else []
     mcps = _ensure_dict(merged.get("mcps"))
+    raw_targets = merged.get("launch_targets", [])
+    launch_targets = [t for t in raw_targets if isinstance(t, dict)] if isinstance(raw_targets, list) else []
+    game_mode_enabled = bool(merged.get("game_mode_enabled", True))
+    game_mode_poll_sec = float(merged.get("game_mode_poll_sec", 5.0))
+    raw_games = merged.get("game_process_names", [])
+    game_process_names = [str(n).strip().lower() for n in raw_games if str(n).strip()] if isinstance(raw_games, list) else []
+    user_profile = _ensure_dict(merged.get("user_profile"))
     whisper_min_confidence = float(merged.get("whisper_min_confidence", 0.4))
     whisper_no_speech_threshold = float(merged.get("whisper_no_speech_threshold", 0.5))
     whisper_min_audio_duration = float(merged.get("whisper_min_audio_duration", 0.3))
@@ -895,6 +944,7 @@ def load_settings() -> Settings:
         whisper_backend=whisper_backend,
         whisper_device=whisper_device,
         whisper_compute_type=whisper_compute_type,
+        whisper_language=whisper_language,
         whisper_vad=whisper_vad,
         whisper_min_confidence=whisper_min_confidence,
         whisper_no_speech_threshold=whisper_no_speech_threshold,
@@ -962,4 +1012,9 @@ def load_settings() -> Settings:
 
         # MCP Integration
         mcps=mcps,
+        launch_targets=launch_targets,
+        game_mode_enabled=game_mode_enabled,
+        game_mode_poll_sec=game_mode_poll_sec,
+        game_process_names=game_process_names,
+        user_profile=user_profile,
     )

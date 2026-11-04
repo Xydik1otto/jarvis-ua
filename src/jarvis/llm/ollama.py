@@ -20,6 +20,7 @@ import json
 import requests
 
 from ..debug import debug_log
+from ..game_mode import is_active as _game_active
 from .backend import LLMBackend, ToolsNotSupportedError
 
 
@@ -237,6 +238,11 @@ class OllamaBackend(LLMBackend):
                 else:
                     payload["options"][key] = value
 
+        # While a game is running, unload the model right after this call so it
+        # doesn't hold VRAM the game needs. A caller-supplied keep_alive wins.
+        if _game_active() and "keep_alive" not in payload:
+            payload["keep_alive"] = "0"
+
         if tools and isinstance(tools, list) and len(tools) > 0:
             payload["tools"] = tools
 
@@ -318,6 +324,10 @@ class OllamaBackend(LLMBackend):
         errors are swallowed so callers never crash on warmup failure."""
         if not self._base_url or not model:
             return False
+        # Don't page a model into VRAM while a game is running — game mode
+        # deliberately keeps the GPU free.
+        if _game_active():
+            return True
         try:
             resp = requests.post(
                 f"{self._base_url}/api/generate",

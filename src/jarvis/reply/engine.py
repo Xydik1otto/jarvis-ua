@@ -843,6 +843,32 @@ def build_reply_language_guidance(cfg) -> Optional[str]:
     )
 
 
+def build_user_profile_block(cfg) -> Optional[str]:
+    """Render the explicit, user-set personalisation block, if any.
+
+    Sourced from ``cfg.user_profile`` (``communication_style`` and ``goals``).
+    Unlike the learned warm-profile from the graph, this is authoritative and
+    always present, so the user gets reliable control over tone and what the
+    assistant keeps in mind. Returns None when the profile is empty.
+    """
+    profile = getattr(cfg, "user_profile", {}) or {}
+    if not isinstance(profile, dict):
+        return None
+    style = str(profile.get("communication_style", "") or "").strip()
+    goals = str(profile.get("goals", "") or "").strip()
+    if not style and not goals:
+        return None
+    lines = [
+        "The user has set the following profile about themselves. Treat it as "
+        "standing, authoritative instructions and honour it in every reply:"
+    ]
+    if style:
+        lines.append(f"- How to communicate with them: {style}")
+    if goals:
+        lines.append(f"- Their current tasks and goals: {goals}")
+    return "\n".join(lines)
+
+
 def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
                     text: str, dialogue_memory: "DialogueMemory",
                     language: Optional[str] = None) -> Optional[str]:
@@ -1486,6 +1512,9 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
 
     _assistant_name = str(getattr(cfg, "wake_word", "jarvis") or "jarvis").strip().capitalize()
     _persona_prompt = build_system_prompt(_assistant_name)
+    # Explicit user-set personalisation (tone + goals). Authoritative and
+    # always present, unlike the learned warm profile below.
+    _user_profile_block = build_user_profile_block(cfg)
 
     def _build_initial_system_message() -> str:
         guidance = [_persona_prompt.strip()]
@@ -1497,6 +1526,11 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
         language_guidance = build_reply_language_guidance(cfg)
         if language_guidance:
             guidance.append(language_guidance)
+
+        # Explicit user-set profile (tone + goals) sits above the learned
+        # warm profile so hand-set preferences win over extracted ones.
+        if _user_profile_block:
+            guidance.append("\n" + _user_profile_block)
 
         if warm_profile_block:
             # Pre-query, query-agnostic user context. Lives OUTSIDE the
@@ -1786,7 +1820,7 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
         print(f"  📝 Prompt dump enabled (session {_dump_session_id})", flush=True)
 
     # Visible progress indicator before LLM loop (helps diagnose hangs)
-    print(f"  💬 Generating response...", flush=True)
+    print(f"  💬 Генерую відповідь...", flush=True)
     debug_log(f"Starting LLM conversation loop (max {max_turns} turns)...", "planning")
 
     # Baseline: number of tool_name messages already in the message list from
@@ -2102,7 +2136,7 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
                 _args_preview = str(tool_args)
             if len(_args_preview) > 160:
                 _args_preview = _args_preview[:157] + "..."
-            print(f"    🛠️ Agent → {tool_name} {_args_preview}", flush=True)
+            print(f"    🛠️ Агент → {tool_name} {_args_preview}", flush=True)
 
             # Check if tool is not allowed - respond with tool error
             if tool_name not in allowed_tools:
@@ -2496,7 +2530,7 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
         # Print reply with appropriate header
         try:
             if not getattr(cfg, "voice_debug", False):
-                print(f"\n🤖 Jarvis\n  {_indent_text(safe_reply)}\n", flush=True)
+                print(f"\n🤖 Джарвіс\n  {_indent_text(safe_reply)}\n", flush=True)
             else:
                 print(f"\n[jarvis]\n  {_indent_text(safe_reply)}\n", flush=True)
         except Exception as e:

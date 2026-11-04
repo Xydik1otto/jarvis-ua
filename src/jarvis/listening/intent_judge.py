@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, List
 
 from ..debug import debug_log
+from ..game_mode import keep_alive as _game_keep_alive
 from ..llm import get_llm_backend
 from .transcript_buffer import TranscriptSegment
 
@@ -410,7 +411,7 @@ Examples:
                         "temperature": 0.0,
                         "num_predict": 200,
                         "num_ctx": 8192,
-                        "keep_alive": "30m",
+                        "keep_alive": _game_keep_alive("30m"),
                     },
                     thinking=self.config.thinking,
                 )

@@ -54,21 +54,21 @@ class FieldMeta:
 
 # Categories and their display order
 CATEGORIES = [
-    ("llm", "🤖 LLM & AI Models"),
-    ("llm_provider", "🔌 LLM Provider"),
-    ("tts", "🔊 Text-to-Speech"),
+    ("llm", "🤖 LLM та моделі ШІ"),
+    ("llm_provider", "🔌 Провайдер LLM"),
+    ("tts", "🔊 Синтез мовлення"),
     ("piper", "🎵 Piper TTS"),
     ("chatterbox", "🎭 Chatterbox TTS"),
-    ("voice_input", "🎤 Voice Input"),
-    ("wake", "👂 Wake Word"),
-    ("whisper", "🗣️ Speech Recognition"),
-    ("vad", "📊 Voice Activity Detection"),
-    ("timing", "⏱️ Timing & Windows"),
-    ("memory", "🧠 Memory & Dialogue"),
-    ("location", "📍 Location"),
-    ("features", "✨ Features"),
-    ("mcps", "🔌 MCP Servers"),
-    ("advanced", "🔧 Advanced"),
+    ("voice_input", "🎤 Голосове введення"),
+    ("wake", "👂 Слово-активатор"),
+    ("whisper", "🗣️ Розпізнавання мовлення"),
+    ("vad", "📊 Виявлення голосу (VAD)"),
+    ("timing", "⏱️ Таймінги та вікна"),
+    ("memory", "🧠 Пам'ять і діалог"),
+    ("location", "📍 Локація"),
+    ("features", "✨ Функції"),
+    ("mcps", "🔌 MCP-сервери"),
+    ("advanced", "🔧 Додатково"),
 ]
 
 
@@ -422,7 +422,7 @@ class SettingsWindow(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("⚙️ Jarvis Settings")
+        self.setWindowTitle("⚙️ Налаштування Jarvis")
         self.setMinimumSize(780, 560)
         self.resize(840, 620)
         self._widgets: Dict[str, Any] = {}  # key -> widget
@@ -442,11 +442,11 @@ class SettingsWindow(QDialog):
         layout.setSpacing(12)
 
         # Header
-        header = QLabel("⚙️ Settings")
+        header = QLabel("⚙️ Налаштування")
         header.setObjectName("title")
         layout.addWidget(header)
 
-        subtitle = QLabel("Changes are saved to config.json. Restart Jarvis to apply.")
+        subtitle = QLabel("Зміни зберігаються у config.json. Перезапусти Jarvis, щоб застосувати.")
         subtitle.setObjectName("subtitle")
         layout.addWidget(subtitle)
 
@@ -492,18 +492,18 @@ class SettingsWindow(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.setContentsMargins(0, 0, 0, 0)
 
-        reset_btn = QPushButton("↩️ Reset to Defaults")
+        reset_btn = QPushButton("↩️ Скинути до типових")
         reset_btn.setObjectName("danger")
         reset_btn.clicked.connect(self._on_reset)
         btn_layout.addWidget(reset_btn)
 
         btn_layout.addStretch()
 
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("Скасувати")
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
 
-        save_btn = QPushButton("💾 Save")
+        save_btn = QPushButton("💾 Зберегти")
         save_btn.setObjectName("primary")
         save_btn.clicked.connect(self._on_save)
         btn_layout.addWidget(save_btn)
@@ -612,7 +612,7 @@ class SettingsWindow(QDialog):
             w.setEchoMode(QLineEdit.EchoMode.Password)
             w.setText(str(current) if current not in (None, "") else "")
             if fm.nullable:
-                w.setPlaceholderText("Leave empty for none")
+                w.setPlaceholderText("Залиш порожнім, якщо немає")
             w.setToolTip(fm.description)
             return w
 
@@ -620,7 +620,7 @@ class SettingsWindow(QDialog):
         w = QLineEdit()
         w.setText(str(current) if current not in (None, "") else "")
         if fm.nullable:
-            w.setPlaceholderText("Leave empty for default")
+            w.setPlaceholderText("Залиш порожнім для типового")
         w.setToolTip(fm.description)
         return w
 
@@ -682,9 +682,9 @@ class SettingsWindow(QDialog):
         btn_layout.setContentsMargins(0, 0, 0, 0)
         btn_layout.setSpacing(6)
 
-        add_btn = QPushButton("+ Add")
-        edit_btn = QPushButton("✏️ Edit")
-        remove_btn = QPushButton("− Remove")
+        add_btn = QPushButton("+ Додати")
+        edit_btn = QPushButton("✏️ Редагувати")
+        remove_btn = QPushButton("− Вилучити")
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(edit_btn)
         btn_layout.addWidget(remove_btn)
@@ -758,21 +758,21 @@ class SettingsWindow(QDialog):
         btn_layout.setContentsMargins(0, 0, 0, 0)
         btn_layout.setSpacing(6)
 
-        add_catalogue_btn = QPushButton("📦 Add from Catalogue")
-        add_catalogue_btn.setToolTip("Pick from a list of popular MCP servers")
+        add_catalogue_btn = QPushButton("📦 Додати з каталогу")
+        add_catalogue_btn.setToolTip("Обрати зі списку популярних MCP-серверів")
         add_catalogue_btn.clicked.connect(self._on_mcp_add_catalogue)
         btn_layout.addWidget(add_catalogue_btn)
 
-        add_custom_btn = QPushButton("+ Add Custom")
-        add_custom_btn.setToolTip("Manually configure an MCP server")
+        add_custom_btn = QPushButton("+ Додати власний")
+        add_custom_btn.setToolTip("Налаштувати MCP-сервер вручну")
         add_custom_btn.clicked.connect(self._on_mcp_add_custom)
         btn_layout.addWidget(add_custom_btn)
 
-        edit_btn = QPushButton("✏️ Edit")
+        edit_btn = QPushButton("✏️ Редагувати")
         edit_btn.clicked.connect(self._on_mcp_edit)
         btn_layout.addWidget(edit_btn)
 
-        remove_btn = QPushButton("− Remove")
+        remove_btn = QPushButton("− Вилучити")
         remove_btn.clicked.connect(self._on_mcp_remove)
         btn_layout.addWidget(remove_btn)
 
@@ -810,7 +810,7 @@ class SettingsWindow(QDialog):
                 display = f"🔌 {name}"
             self._mcp_list.addItem(display)
         if self._mcp_list.count() == 0:
-            self._mcp_detail.setText("No MCP servers configured. Add one to extend Jarvis's capabilities.")
+            self._mcp_detail.setText("MCP-сервери не налаштовано. Додай, щоб розширити можливості Джарвіса.")
         else:
             self._mcp_list.setCurrentRow(0)
 
@@ -871,8 +871,8 @@ class SettingsWindow(QDialog):
             return
         name = list(self._mcp_configs.keys())[row]
         reply = QMessageBox.question(
-            self, "🔌 Remove MCP Server",
-            f"Remove '{name}'?\n\nYou can always re-add it later.",
+            self, "🔌 Вилучити MCP-сервер",
+            f"Вилучити '{name}'?\n\nЙого завжди можна додати знову.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -946,22 +946,22 @@ class SettingsWindow(QDialog):
         if _save_json(self._config_path, config):
             debug_log("settings saved to config.json", "settings")
             QMessageBox.information(
-                self, "✅ Saved",
-                "Settings saved. Restart Jarvis for changes to take effect."
+                self, "✅ Збережено",
+                "Налаштування збережено. Перезапусти Jarvis, щоб зміни застосувалися."
             )
             self.accept()
         else:
             QMessageBox.warning(
-                self, "⚠️ Error",
-                f"Could not save settings to:\n{self._config_path}"
+                self, "⚠️ Помилка",
+                f"Не вдалося зберегти налаштування до:\n{self._config_path}"
             )
 
     def _on_reset(self) -> None:
         """Reset all fields to defaults."""
         reply = QMessageBox.question(
-            self, "↩️ Reset to Defaults",
-            "Reset all settings to their default values?\n\n"
-            "This will overwrite your config.json.",
+            self, "↩️ Скинути до типових",
+            "Скинути всі налаштування до типових значень?\n\n"
+            "Це перезапише твій config.json.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -1038,7 +1038,7 @@ class _MCPCatalogueDialog(QDialog):
 
     def __init__(self, existing: Dict[str, Dict], parent=None):
         super().__init__(parent)
-        self.setWindowTitle("📦 MCP Server Catalogue")
+        self.setWindowTitle("📦 Каталог MCP-серверів")
         self.setMinimumSize(480, 420)
         apply_theme(self)
 
@@ -1049,7 +1049,7 @@ class _MCPCatalogueDialog(QDialog):
         layout.setContentsMargins(20, 20, 20, 20)
         layout.setSpacing(12)
 
-        desc = QLabel("Select MCP servers to add. Already-configured servers are shown as checked.")
+        desc = QLabel("Обери MCP-сервери для додавання. Уже налаштовані позначено галочкою.")
         desc.setWordWrap(True)
         desc.setStyleSheet("color: #a1a1aa; font-size: 13px;")
         layout.addWidget(desc)
@@ -1090,7 +1090,7 @@ class _MCPCatalogueDialog(QDialog):
             cb.setChecked(already_added)
             if already_added:
                 cb.setEnabled(False)
-                cb.setToolTip("Already configured")
+                cb.setToolTip("Вже налаштовано")
             self._checkboxes[entry.name] = cb
             card_layout.addWidget(cb)
 
@@ -1121,10 +1121,10 @@ class _MCPCatalogueDialog(QDialog):
         # Buttons
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("Скасувати")
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
-        add_btn = QPushButton("🔌 Add Selected")
+        add_btn = QPushButton("🔌 Додати обрані")
         add_btn.setObjectName("primary")
         add_btn.clicked.connect(self._on_add)
         btn_layout.addWidget(add_btn)
@@ -1182,7 +1182,7 @@ class _MCPEditDialog(QDialog):
     def __init__(self, name: str = "", config: Optional[Dict] = None, parent=None):
         super().__init__(parent)
         self._is_edit = bool(name)
-        self.setWindowTitle("✏️ Edit MCP Server" if self._is_edit else "🔌 Add Custom MCP Server")
+        self.setWindowTitle("✏️ Редагувати MCP-сервер" if self._is_edit else "🔌 Додати власний MCP-сервер")
         self.setMinimumSize(440, 340)
         apply_theme(self)
 
@@ -1197,24 +1197,24 @@ class _MCPEditDialog(QDialog):
         form.setLabelAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         self._name_edit = QLineEdit(name)
-        self._name_edit.setPlaceholderText("e.g. filesystem, my-server")
+        self._name_edit.setPlaceholderText("напр. filesystem, my-server")
         if self._is_edit:
             self._name_edit.setEnabled(False)
         form.addRow("Name", self._name_edit)
 
         self._command_edit = QLineEdit(str(config.get("command", "")))
-        self._command_edit.setPlaceholderText("e.g. npx, node, python")
+        self._command_edit.setPlaceholderText("напр. npx, node, python")
         form.addRow("Command", self._command_edit)
 
         self._args_edit = QLineEdit(" ".join(str(a) for a in config.get("args", [])))
         self._args_edit.setPlaceholderText("e.g. -y @modelcontextprotocol/server-filesystem ~")
-        self._args_edit.setToolTip("Space-separated arguments")
+        self._args_edit.setToolTip("Аргументи через пробіл")
         form.addRow("Args", self._args_edit)
 
         env = config.get("env") or {}
         env_str = " ".join(f"{k}={v}" for k, v in env.items())
         self._env_edit = QLineEdit(env_str)
-        self._env_edit.setPlaceholderText("e.g. API_KEY=abc123 (space-separated KEY=VALUE)")
+        self._env_edit.setPlaceholderText("напр. API_KEY=abc123 (KEY=VALUE через пробіл)")
         form.addRow("Env vars", self._env_edit)
 
         layout.addLayout(form)
@@ -1223,10 +1223,10 @@ class _MCPEditDialog(QDialog):
         # Buttons
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("Скасувати")
         cancel_btn.clicked.connect(self.reject)
         btn_layout.addWidget(cancel_btn)
-        save_btn = QPushButton("💾 Save")
+        save_btn = QPushButton("💾 Зберегти")
         save_btn.setObjectName("primary")
         save_btn.clicked.connect(self._on_save)
         btn_layout.addWidget(save_btn)
@@ -1236,10 +1236,10 @@ class _MCPEditDialog(QDialog):
         name = self._name_edit.text().strip()
         command = self._command_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "⚠️ Missing Name", "Please enter a server name.")
+            QMessageBox.warning(self, "⚠️ Немає назви", "Введи назву сервера.")
             return
         if not command:
-            QMessageBox.warning(self, "⚠️ Missing Command", "Please enter a command.")
+            QMessageBox.warning(self, "⚠️ Немає команди", "Введи команду.")
             return
         self.accept()
 

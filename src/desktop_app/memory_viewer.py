@@ -2041,13 +2041,13 @@ def index() -> str:
         <div class="header-content">
             <div class="logo">
                 <span class="logo-icon">🧠</span>
-                <h1>Jarvis Memory</h1>
+                <h1>Пам'ять Джарвіса</h1>
             </div>
 
             <div class="search-container">
                 <div class="search-wrapper">
                     <span class="search-icon">🔍</span>
-                    <input type="text" class="search-input" id="search-input" placeholder="Search memories..." />
+                    <input type="text" class="search-input" id="search-input" placeholder="Пошук у пам'яті..." />
                 </div>
             </div>
 

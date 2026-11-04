@@ -44,7 +44,7 @@ class DiaryUpdateDialog(QDialog):
 
     def _setup_ui(self):
         """Set up the dialog UI."""
-        self.setWindowTitle("Saving Your Diary")
+        self.setWindowTitle("Збереження щоденника")
         self.setMinimumSize(550, 450)
         self.setWindowFlags(
             Qt.WindowType.Dialog |
@@ -60,13 +60,13 @@ class DiaryUpdateDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
 
         # Title
-        title = QLabel("Updating Your Diary")
+        title = QLabel("Оновлення щоденника")
         title.setObjectName("title")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
         # Status label
-        self.status_label = QLabel("Preparing to save...")
+        self.status_label = QLabel("Готуюся зберегти...")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setObjectName("subtitle")
         layout.addWidget(self.status_label)
@@ -79,28 +79,28 @@ class DiaryUpdateDialog(QDialog):
         layout.addWidget(self.progress_bar)
 
         # Conversations section
-        conv_label = QLabel("Today's Conversations")
+        conv_label = QLabel("Сьогоднішні розмови")
         conv_label.setObjectName("section_title")
         layout.addWidget(conv_label)
 
         self.conversations_text = QTextEdit()
         self.conversations_text.setReadOnly(True)
         self.conversations_text.setMaximumHeight(100)
-        self.conversations_text.setPlaceholderText("Loading conversations...")
+        self.conversations_text.setPlaceholderText("Завантаження розмов...")
         layout.addWidget(self.conversations_text)
 
         # Diary entry section
-        diary_label = QLabel("Diary Entry")
+        diary_label = QLabel("Запис у щоденнику")
         diary_label.setObjectName("section_title")
         layout.addWidget(diary_label)
 
         self.diary_text = QTextEdit()
         self.diary_text.setReadOnly(True)
-        self.diary_text.setPlaceholderText("Writing diary entry...")
+        self.diary_text.setPlaceholderText("Пишу запис у щоденник...")
         layout.addWidget(self.diary_text, stretch=1)
 
         # Hint at bottom
-        hint = QLabel("Please wait while Jarvis saves your conversations...")
+        hint = QLabel("Зачекай, поки Джарвіс збереже твої розмови...")
         hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hint.setObjectName("subtitle")
         layout.addWidget(hint)
@@ -136,10 +136,10 @@ class DiaryUpdateDialog(QDialog):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(100)
         if success:
-            self.status_label.setText("Diary saved successfully!")
+            self.status_label.setText("Щоденник успішно збережено!")
             self.status_label.setStyleSheet(f"color: {COLORS['success']};")
         else:
-            self.status_label.setText("No new entries to save")
+            self.status_label.setText("Немає нових записів для збереження")
             self.status_label.setStyleSheet(f"color: {COLORS['text_muted']};")
             # Clear placeholders if nothing was populated
             if not self.conversations_text.toPlainText():
@@ -224,5 +224,5 @@ class DiaryUpdateDialog(QDialog):
         intercepted and forwarded to this dialog via process_log_line().
         """
         # Initial state - will be updated when IPC events arrive
-        self.conversations_text.setPlaceholderText("Waiting for daemon...")
-        self.diary_text.setPlaceholderText("Waiting for diary generation...")
+        self.conversations_text.setPlaceholderText("Очікування демона...")
+        self.diary_text.setPlaceholderText("Очікування генерації щоденника...")

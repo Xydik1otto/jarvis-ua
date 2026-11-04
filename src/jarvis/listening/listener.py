@@ -598,7 +598,7 @@ class VoiceListener(threading.Thread):
                             text_lower = salvaged
                         else:
                             debug_log(f"🔇 Early echo rejection (score={echo_score}): \"{text_lower}\"", "voice")
-                            print(f"  🔇 Heard (echo): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
+                            print(f"  🔇 Почуто (відлуння): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
                             return
 
                 # Non-echo (or salvaged) in hot window — start beep
@@ -652,7 +652,7 @@ class VoiceListener(threading.Thread):
                     text_lower = salvaged
                 else:
                     debug_log(f"echo rejected during TTS: '{text_lower[:50]}'", "echo")
-                    print(f"  🔇 Heard (echo): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
+                    print(f"  🔇 Почуто (відлуння): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
                     return
 
         # Salvage user speech from merged echo+speech chunks.
@@ -763,14 +763,14 @@ class VoiceListener(threading.Thread):
 
             if intent_judgment is not None:
                 # Log intent judge decision for user visibility
-                mode_str = "hot window" if could_be_hot_window else "wake word"
+                mode_str = "гаряче вікно" if could_be_hot_window else "слово-активатор"
                 if intent_judgment.directed:
-                    print(f"  🧠 Intent ({mode_str}): directed → \"{intent_judgment.query or text_lower}\"", flush=True)
+                    print(f"  🧠 Намір ({mode_str}): звернення → \"{intent_judgment.query or text_lower}\"", flush=True)
                 else:
-                    print(f"  🧠 Intent ({mode_str}): not directed ({intent_judgment.reasoning})", flush=True)
+                    print(f"  🧠 Намір ({mode_str}): не звернення ({intent_judgment.reasoning})", flush=True)
             else:
-                reason = self._intent_judge.last_failure_reason or "no segments or unavailable"
-                print(f"  🧠 Intent judge: unavailable ({reason})", flush=True)
+                reason = self._intent_judge.last_failure_reason or "немає сегментів або недоступний"
+                print(f"  🧠 Суддя наміру: недоступний ({reason})", flush=True)
                 debug_log(f"intent judge returned None — falling back ({reason})", "voice")
                 # Hot window fallback: if the early echo check already cleared
                 # this text, accept it even without the judge's verdict.
@@ -788,7 +788,7 @@ class VoiceListener(threading.Thread):
                             and text_words <= max(tts_words * 1.3, tts_words + 3)
                         )
                     if not is_pure_echo:
-                        print(f"  🧠 Intent fallback: accepting hot window speech", flush=True)
+                        print(f"  🧠 Резерв наміру: приймаю мовлення в гарячому вікні", flush=True)
                         debug_log(f"✅ Hot window fallback (judge unavailable): \"{text_lower}\"", "voice")
                         self.state_manager.cancel_hot_window_activation()
                         self._transcript_buffer.mark_segment_processed(text_lower)
@@ -819,7 +819,7 @@ class VoiceListener(threading.Thread):
                             text_lower, wake_word, aliases
                         )
                         if not has_wake_word:
-                            print(f"  🧠 Intent override: no wake word found, ignoring", flush=True)
+                            print(f"  🧠 Перевизначення наміру: слово-активатор не знайдено, ігнорую", flush=True)
                             debug_log(
                                 f"⚠️ Intent judge said directed but no wake word found in '{text_lower[:50]}...' "
                                 f"(reasoning: {intent_judgment.reasoning})",
@@ -865,7 +865,7 @@ class VoiceListener(threading.Thread):
                                 )
                                 if query_echo_score >= 70:
                                     debug_log(f"🔇 Echo in hot window (directed, score={echo_score}): \"{text_lower}\"", "voice")
-                                    print(f"  🔇 Heard (echo): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
+                                    print(f"  🔇 Почуто (відлуння): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
                                     self._stop_thinking_tune()
                                     return
                                 else:
@@ -917,7 +917,7 @@ class VoiceListener(threading.Thread):
                             text_lower, wake_word, aliases
                         )
                         if not has_wake_word:
-                            print(f"  🧠 Intent override: no wake word found, ignoring", flush=True)
+                            print(f"  🧠 Перевизначення наміру: слово-активатор не знайдено, ігнорую", flush=True)
                             debug_log(
                                 f"⚠️ Intent judge said directed (no query) but no wake word in '{text_lower[:50]}...'",
                                 "voice"
@@ -950,7 +950,7 @@ class VoiceListener(threading.Thread):
                             )
                             if is_pure_echo:
                                 debug_log(f"🔇 Echo in hot window (directed/no-query, score={echo_score}): \"{text_lower}\"", "voice")
-                                print(f"  🔇 Heard (echo): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
+                                print(f"  🔇 Почуто (відлуння): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
                                 self._stop_thinking_tune()
                                 return
 
@@ -1031,7 +1031,7 @@ class VoiceListener(threading.Thread):
                                 self._stop_thinking_tune()
                                 return
                             # Mixed echo+speech — override the echo reasoning
-                            print(f"  🧠 Intent override: accepting hot window speech (mixed echo+speech)", flush=True)
+                            print(f"  🧠 Перевизначення наміру: приймаю мовлення в гарячому вікні (відлуння+мовлення)", flush=True)
                             debug_log(
                                 f"⚡ Overriding echo reasoning in hot window "
                                 f"(echo_score={echo_score}, text longer than TTS): "
@@ -1079,7 +1079,7 @@ class VoiceListener(threading.Thread):
                             # Override the intent judge rejection — small models
                             # sometimes reject valid follow-ups like "don't you
                             # already know that?" as not directed.
-                            print(f"  🧠 Intent override: accepting hot window speech", flush=True)
+                            print(f"  🧠 Перевизначення наміру: приймаю мовлення в гарячому вікні", flush=True)
                             debug_log(
                                 f"⚡ Overriding intent judge in hot window "
                                 f"(echo_score={echo_score}, reasoning={intent_judgment.reasoning}): "
@@ -1153,7 +1153,7 @@ class VoiceListener(threading.Thread):
             # to a TTS question that arrived before hot window activated
             debug_log(f"input ignored (during TTS, not a stop command{intent_info}): {text_lower}", "voice")
             try:
-                print(f"  ⏳ Heard during TTS (waiting for hot window): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
+                print(f"  ⏳ Почуто під час TTS (чекаю на гаряче вікно): \"{text_lower[:50]}{'...' if len(text_lower) > 50 else ''}\"", flush=True)
             except Exception:
                 pass
         else:
@@ -1191,7 +1191,7 @@ class VoiceListener(threading.Thread):
             )
         except Exception as e:
             # Log the error visibly - this should never happen silently
-            print(f"\n  ❌ Reply engine error: {e}", flush=True)
+            print(f"\n  ❌ Помилка рушія відповіді: {e}", flush=True)
             debug_log(f"reply engine exception: {e}", "voice")
             self._stop_thinking_tune()
             # Provide user feedback via TTS
@@ -1308,7 +1308,7 @@ class VoiceListener(threading.Thread):
             if confidence is not None and confidence < min_confidence:
                 if confidence >= marginal_threshold:
                     # Marginal confidence - show in log viewer (not debug)
-                    print(f"🔇 Low confidence ({confidence:.2f}): \"{seg.text.strip()[:50]}...\"", flush=True)
+                    print(f"🔇 Низька впевненість ({confidence:.2f}): \"{seg.text.strip()[:50]}...\"", flush=True)
                 else:
                     # Very low confidence - debug only
                     debug_log(f"segment filtered (confidence={confidence:.2f}): '{seg.text}'", "voice")
@@ -1472,15 +1472,15 @@ class VoiceListener(threading.Thread):
         self._whisper_device = resolved_device
 
         if try_device != device and device in ("auto", "cuda"):
-            print("     ⚠️  CUDA not available, using CPU (this may be slower)", flush=True)
-            print("     💡 Tip: Install NVIDIA CUDA toolkit for faster speech recognition", flush=True)
+            print("     ⚠️  CUDA недоступна, використовую CPU (може бути повільніше)", flush=True)
+            print("     💡 Порада: встанови NVIDIA CUDA toolkit для швидшого розпізнавання мовлення", flush=True)
         if try_compute != compute:
-            print(f"     ⚠️  Using '{try_compute}' compute type ('{compute}' not supported)", flush=True)
+            print(f"     ⚠️  Використовую тип обчислень '{try_compute}' ('{compute}' не підтримується)", flush=True)
         if resolved_device == "cpu":
-            print(f"     ⚡ CPU mode: using {cpu_threads} threads with optimised decoding", flush=True)
+            print(f"     ⚡ Режим CPU: {cpu_threads} потоків з оптимізованим декодуванням", flush=True)
 
         suffix = f" ({context})" if context else ""
-        print(f"     🎤 Whisper '{model_name}' loaded on {resolved_device}{suffix}", flush=True)
+        print(f"     🎤 Whisper '{model_name}' завантажено на {resolved_device}{suffix}", flush=True)
         return resolved_device
 
     def _start_llm_warmup(self) -> list[threading.Thread]:
@@ -1578,14 +1578,14 @@ class VoiceListener(threading.Thread):
             and is_location_available()
         )
         if location_known:
-            return f"\"How's the weather, {wake_title}?\""
-        return f"\"How's the weather in [your city], {wake_title}?\""
+            return f"\"Яка погода, {wake_title}?\""
+        return f"\"Яка погода в [твоє місто], {wake_title}?\""
 
     def run(self) -> None:
         """Main voice listening loop."""
         if sd is None:
             debug_log("sounddevice not available", "voice")
-            print("  ❌ Audio system not available - sounddevice failed to load", flush=True)
+            print("  ❌ Аудіосистема недоступна — sounddevice не завантажився", flush=True)
             return
 
         # Verify PortAudio is working by querying devices (catches Windows DLL issues)
@@ -1594,7 +1594,7 @@ class VoiceListener(threading.Thread):
             input_devices = [d for d in devices if d.get('max_input_channels', 0) > 0]
             debug_log(f"PortAudio initialised: {len(input_devices)} input device(s) found", "voice")
             if not input_devices:
-                print("  ❌ No microphone found. Please connect a microphone.", flush=True)
+                print("  ❌ Мікрофон не знайдено. Під'єднай мікрофон.", flush=True)
                 return
         except Exception as e:
             debug_log(f"PortAudio device query failed: {e}", "voice")
@@ -1671,7 +1671,7 @@ class VoiceListener(threading.Thread):
                         print("", flush=True)
                     return
                 elif mic_ok.is_set():
-                    print("  ✅ Microphone permission OK", flush=True)
+                    print("  ✅ Дозвіл на мікрофон OK", flush=True)
                 else:
                     print("  ⚠️  Microphone returned empty audio", flush=True)
             except Exception as e:
@@ -1682,7 +1682,7 @@ class VoiceListener(threading.Thread):
         # user engagement doesn't pay cold-load cost on either model. All
         # warmup output (Whisper + LLMs) is indented under this header to
         # visually group the phase.
-        print("  🔥 Warming up models...", flush=True)
+        print("  🔥 Прогріваю моделі...", flush=True)
         self._llm_warmup_started_at = time.time()
         self._llm_warmup_threads = self._start_llm_warmup()
 
@@ -1967,7 +1967,7 @@ class VoiceListener(threading.Thread):
 
             if still_warming:
                 debug_log("LLM warmup still running after 60s — continuing without", "voice")
-                print("     ⏳ Some models still warming — continuing anyway", flush=True)
+                print("     ⏳ Деякі моделі ще прогріваються — продовжую", flush=True)
 
         # Audio parameters
         frame_ms = int(getattr(self.cfg, "vad_frame_ms", 20))
@@ -2027,14 +2027,14 @@ class VoiceListener(threading.Thread):
                 dev = sd.query_devices(stream_kwargs["device"])
                 device_name = dev.get('name', 'Unknown')
                 debug_log(f"using input device: {device_name} (index {stream_kwargs['device']})", "voice")
-                print(f"  🎤 Using audio device: {device_name}", flush=True)
+                print(f"  🎤 Використовую аудіопристрій: {device_name}", flush=True)
             else:
                 debug_log("using system default input device", "voice")
                 try:
                     default_dev = sd.query_devices(sd.default.device[0])
-                    print(f"  🎤 Using default device: {default_dev.get('name', 'Unknown')}", flush=True)
+                    print(f"  🎤 Використовую пристрій за замовчуванням: {default_dev.get('name', 'Unknown')}", flush=True)
                 except Exception:
-                    print("  🎤 Using system default input device", flush=True)
+                    print("  🎤 Використовую системний вхідний пристрій за замовчуванням", flush=True)
         except Exception:
             pass
 
@@ -2088,9 +2088,9 @@ class VoiceListener(threading.Thread):
 
             # Provide helpful error messages for common issues
             if "access" in error_msg or "permission" in error_msg:
-                print(f"  ❌ Microphone access denied. Please check: {_get_mic_permission_hint()}", flush=True)
+                print(f"  ❌ Доступ до мікрофона заборонено. Перевір: {_get_mic_permission_hint()}", flush=True)
             elif "device" in error_msg and ("use" in error_msg or "busy" in error_msg):
-                print("  ❌ Microphone is being used by another application", flush=True)
+                print("  ❌ Мікрофон використовується іншою програмою", flush=True)
             elif "device" in error_msg:
                 print(f"  ❌ Failed to open microphone: {open_error}", flush=True)
                 print("     Try selecting a different audio device in settings", flush=True)
@@ -2108,7 +2108,7 @@ class VoiceListener(threading.Thread):
                     error_msg = str(e).lower()
                     debug_log(f"failed to start audio stream: {e}", "voice")
                     if "access" in error_msg or "permission" in error_msg:
-                        print(f"  ❌ Microphone access denied. Please check: {_get_mic_permission_hint()}", flush=True)
+                        print(f"  ❌ Доступ до мікрофона заборонено. Перевір: {_get_mic_permission_hint()}", flush=True)
                     else:
                         print(f"  ❌ Failed to start recording: {e}", flush=True)
                     return
@@ -2116,11 +2116,11 @@ class VoiceListener(threading.Thread):
             # Show ready message only after stream is confirmed active
             wake_word = getattr(self.cfg, "wake_word", "jarvis").lower()
             wake_title = wake_word.title()
-            print(f"\n{'─' * 50}\n🎙️  Listening! Try:", flush=True)
+            print(f"\n{'─' * 50}\n🎙️  Слухаю! Спробуй:", flush=True)
             print(f"      {self._weather_example(wake_title)}", flush=True)
-            print(f"      \"I just ate a Big Mac, {wake_title}.\"", flush=True)
-            print(f"      \"What are you thinking, {wake_title}?\"", flush=True)
-            print(f"      \"What do you know about me, {wake_title}?\"", flush=True)
+            print(f"      \"Я щойно з'їв Біг Мак, {wake_title}.\"", flush=True)
+            print(f"      \"Про що ти думаєш, {wake_title}?\"", flush=True)
+            print(f"      \"Що ти про мене знаєш, {wake_title}?\"", flush=True)
 
             # Small-model disclaimer: SMALL models can't infer your intent
             # from vague prompts, but they can still execute complex flows
@@ -2131,11 +2131,11 @@ class VoiceListener(threading.Thread):
             chat_model_name = str(getattr(self.cfg, "llm_chat_model", "") or "").strip()
             if chat_model_name and detect_model_size(chat_model_name) == ModelSize.SMALL:
                 print(
-                    f"  ⚠️  Small model in use ({chat_model_name}). Assume it can't infer — spell out the steps for anything more involved:",
+                    f"  ⚠️  Використовується мала модель ({chat_model_name}). Вважай, що вона не здогадається — розпиши кроки для складніших запитів:",
                     flush=True,
                 )
                 print(
-                    f"      \"Tell me tomorrow's weather, then find local events for tomorrow, then recommend ones that suit the weather, {wake_title}.\"",
+                    f"      \"Скажи погоду на завтра, потім знайди місцеві події на завтра, потім порадь ті, що пасують до погоди, {wake_title}.\"",
                     flush=True,
                 )
 
@@ -2151,11 +2151,11 @@ class VoiceListener(threading.Thread):
                 has_chrome_mcp = False
             if has_chrome_mcp:
                 print(
-                    f"  🌐 Chrome MCP detected. Name the destination URL so the browser tool can act directly:",
+                    f"  🌐 Виявлено Chrome MCP. Називай URL призначення, щоб браузерний інструмент діяв напряму:",
                     flush=True,
                 )
                 print(
-                    f"      \"Navigate to youtube.com, {wake_title}.\"",
+                    f"      \"Перейди на youtube.com, {wake_title}.\"",
                     flush=True,
                 )
 
@@ -2176,9 +2176,9 @@ class VoiceListener(threading.Thread):
                 if not _audio_health_logged and time.time() - _audio_start_time > 5:
                     _audio_health_logged = True
                     if self._callback_count == 0:
-                        print("  ⚠️  No audio received after 5 seconds!", flush=True)
-                        print(f"     Check: {_get_mic_permission_hint()}", flush=True)
-                        print("     Also check that your microphone is not muted", flush=True)
+                        print("  ⚠️  Немає аудіо вже 5 секунд!", flush=True)
+                        print(f"     Перевір: {_get_mic_permission_hint()}", flush=True)
+                        print("     Також перевір, що мікрофон не вимкнено (mute)", flush=True)
 
                 try:
                     item = self._audio_q.get(timeout=0.2)
@@ -2320,12 +2320,15 @@ class VoiceListener(threading.Thread):
         # Speech recognition with appropriate backend
         try:
             if self._whisper_backend == "mlx":
-                # MLX Whisper transcription
+                # MLX Whisper transcription. Empty config = auto-detect;
+                # pinning a language (e.g. "uk") stops per-utterance drift and
+                # sharpens accuracy for users who only ever speak one.
+                forced_lang = (getattr(self.cfg, "whisper_language", "") or "").strip() or None
                 with self.transcribe_lock:
                     result = mlx_whisper.transcribe(
                         audio,
                         path_or_hf_repo=self._mlx_model_repo,
-                        language=None,
+                        language=forced_lang,
                     )
 
                 # Capture Whisper's auto-detected language (ISO-639-1) so
@@ -2358,7 +2361,7 @@ class VoiceListener(threading.Thread):
                         if confidence < min_confidence:
                             if confidence >= marginal_threshold:
                                 # Marginal confidence - show in log viewer (not debug)
-                                print(f"🔇 Low confidence ({confidence:.2f}): \"{seg_text[:50]}...\"", flush=True)
+                                print(f"🔇 Низька впевненість ({confidence:.2f}): \"{seg_text[:50]}...\"", flush=True)
                             else:
                                 # Very low confidence - debug only
                                 debug_log(f"MLX segment filtered (confidence={confidence:.2f}): '{seg_text[:50]}'", "voice")
@@ -2374,15 +2377,20 @@ class VoiceListener(threading.Thread):
                 # faster-whisper transcription
                 # CPU mode: skip timestamps and disable context carry-over for speed
                 cpu_mode = self._whisper_device == "cpu"
+                # Empty config = auto-detect (Whisper guesses per utterance,
+                # which drifts between neighbouring languages). Pinning a
+                # language stops the drift and sharpens accuracy for users who
+                # only ever speak one.
+                forced_lang = (getattr(self.cfg, "whisper_language", "") or "").strip() or None
                 with self.transcribe_lock:
                     try:
                         segments, _info = self.model.transcribe(
-                            audio, language=None, vad_filter=False,
+                            audio, language=forced_lang, vad_filter=False,
                             condition_on_previous_text=not cpu_mode,
                             without_timestamps=cpu_mode,
                         )
                     except TypeError:
-                        segments, _info = self.model.transcribe(audio, language=None)
+                        segments, _info = self.model.transcribe(audio, language=forced_lang)
                     segments_list = list(segments)
                 # Capture the detected language (faster-whisper exposes it
                 # on the info object). Guard against older API variants
@@ -2395,7 +2403,7 @@ class VoiceListener(threading.Thread):
         except Exception as e:
             debug_log(f"transcription error: {e}", "voice")
             if sys.platform == 'win32':
-                print(f"  ❌ Whisper error: {e}", flush=True)
+                print(f"  ❌ Помилка Whisper: {e}", flush=True)
             text = ""
 
         if not text or not text.strip():
@@ -2406,7 +2414,7 @@ class VoiceListener(threading.Thread):
         # there is no prior turn to visually separate from.
         separator = "" if self._first_utterance else f"\n{'─' * 50}"
         self._first_utterance = False
-        print(f"{separator}\n📝 Heard: \"{text}\"", flush=True)
+        print(f"{separator}\n📝 Розпізнано: \"{text}\"", flush=True)
 
         # Filter out repetitive hallucinations (e.g., "don't don't don't...")
         if self._is_repetitive_hallucination(text):

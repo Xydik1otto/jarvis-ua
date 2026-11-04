@@ -72,6 +72,71 @@ def get_piper_voice_language(model_path: Optional[str] = None) -> Optional[str]:
     return None
 
 
+_UK_ONES = ["нуль", "один", "два", "три", "чотири", "п'ять", "шість",
+            "сім", "вісім", "дев'ять", "десять", "одинадцять", "дванадцять",
+            "тринадцять", "чотирнадцять", "п'ятнадцять", "шістнадцять",
+            "сімнадцять", "вісімнадцять", "дев'ятнадцять"]
+_UK_TENS = ["", "", "двадцять", "тридцять", "сорок", "п'ятдесят",
+            "шістдесят", "сімдесят", "вісімдесят", "дев'яносто"]
+_UK_HUNDREDS = ["", "сто", "двісті", "триста", "чотириста", "п'ятсот",
+                "шістсот", "сімсот", "вісімсот", "дев'ятсот"]
+
+
+def _uk_number_to_words(n: int) -> str:
+    """Spell a non-negative integer (0-9999) in Ukrainian.
+
+    Enough for the clock times, temperatures and counts a voice assistant
+    reads aloud. Larger numbers are spoken digit by digit as a fallback.
+    """
+    if n < 0:
+        return "мінус " + _uk_number_to_words(-n)
+    if n < 20:
+        return _UK_ONES[n]
+    if n < 100:
+        rest = n % 10
+        return _UK_TENS[n // 10] + (f" {_UK_ONES[rest]}" if rest else "")
+    if n < 1000:
+        rest = n % 100
+        return _UK_HUNDREDS[n // 100] + (f" {_uk_number_to_words(rest)}" if rest else "")
+    if n < 10000:
+        th = n // 1000
+        rest = n % 1000
+        th_word = "тисяча" if th == 1 else ("тисячі" if 2 <= th <= 4 else "тисяч")
+        head = ("одна" if th == 1 else ("дві" if th == 2 else _UK_ONES[th])) + f" {th_word}"
+        return head + (f" {_uk_number_to_words(rest)}" if rest else "")
+    return " ".join(_UK_ONES[int(d)] for d in str(n))
+
+
+def normalise_for_restricted_voice(text: str, allowed: set) -> str:
+    """Fold text down to what a phoneme_type="text" voice can pronounce.
+
+    Such voices map the bare alphabet, so capitals, digits, brackets and
+    Latin letters have no phoneme and get dropped mid-word. We lower-case,
+    read numbers out as words, and replace anything still outside the voice's
+    own character set with a space so it becomes a clean pause rather than a
+    swallowed sound.
+    """
+    if not allowed:
+        return text
+
+    # Numbers first, before we lose the digits: "04:29" -> "нуль чотири : ..."
+    def _expand(m):
+        return " ".join(_uk_number_to_words(int(d)) for d in m.group())
+
+    text = re.sub(r"\d+", _expand, text)
+    text = text.lower()
+    out = []
+    for ch in text:
+        if ch in allowed:
+            out.append(ch)
+        elif ch.isspace():
+            out.append(" ")
+        else:
+            out.append(" ")  # unknown symbol -> pause, never a missing phoneme
+    # Collapse the runs of spaces the substitutions create.
+    return re.sub(r"\s+", " ", "".join(out)).strip()
+
+
 def _download_piper_voice(voice_name: str, progress_callback: Optional[Callable[[str], None]] = None) -> Optional[str]:
     """
     Download a Piper voice model from HuggingFace.
@@ -760,6 +825,27 @@ class PiperTTS:
                 self._voice = PiperVoice.load(model_path, config_path)
                 self._sample_rate = self._voice.config.sample_rate
 
+                # Some voices (e.g. uk_UA-ukrainian_tts) use phoneme_type "text":
+                # their phoneme map is the raw alphabet, so anything outside it
+                # (capitals, digits, brackets, Latin) is dropped mid-word and the
+                # synth logs "Missing phoneme". espeak voices normalise upstream
+                # and need none of this. Capture the allowed set so we can fold
+                # text down to it before synthesis.
+                self._restricted_charset = None
+                try:
+                    with open(config_path, "r", encoding="utf-8") as f:
+                        vcfg = json.load(f)
+                    if vcfg.get("phoneme_type") == "text":
+                        self._restricted_charset = {
+                            c for c in vcfg.get("phoneme_id_map", {}) if c
+                        }
+                        debug_log(
+                            f"Piper text-voice charset: {len(self._restricted_charset)} symbols",
+                            "tts",
+                        )
+                except Exception as exc:
+                    debug_log(f"could not read voice charset: {exc}", "tts")
+
                 debug_log(f"Piper TTS initialized: sample_rate={self._sample_rate}", "tts")
 
             except ImportError as e:
@@ -873,8 +959,16 @@ class PiperTTS:
                 noise_scale=self.noise_scale,
                 noise_w_scale=self.noise_w,
             )
+            # Restricted "text" voices can't pronounce capitals/digits/brackets;
+            # fold the text down to their alphabet so nothing is dropped mid-word.
+            speak_text = text
+            restricted = getattr(self, "_restricted_charset", None)
+            if restricted:
+                speak_text = normalise_for_restricted_voice(text, restricted)
+                debug_log(f"restricted-voice text: {speak_text!r}", "tts")
+
             audio_chunks = []
-            for chunk in self._voice.synthesize(text, syn_config):
+            for chunk in self._voice.synthesize(speak_text, syn_config):
                 if self._should_interrupt.is_set():
                     debug_log("Piper TTS interrupted during synthesis", "tts")
                     return

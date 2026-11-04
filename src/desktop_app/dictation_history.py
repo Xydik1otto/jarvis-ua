@@ -1,5 +1,5 @@
 """
-🎙️ Dictation History Window
+🎙️ Історія диктування Window
 
 Displays past dictation results in a scrollable list with copy and delete
 actions. Follows the same visual pattern as the Log Viewer.
@@ -137,15 +137,15 @@ class _DictationCard(QFrame):
         btn_row.setSpacing(8)
         btn_row.addStretch()
 
-        copy_btn = QPushButton("📋 Copy")
+        copy_btn = QPushButton("📋 Копіювати")
         copy_btn.setStyleSheet(_BTN_STYLE)
-        copy_btn.setToolTip("Copy text to clipboard")
+        copy_btn.setToolTip("Копіювати текст у буфер")
         copy_btn.clicked.connect(lambda: self._copy_text(text))
         btn_row.addWidget(copy_btn)
 
-        delete_btn = QPushButton("🗑️ Delete")
+        delete_btn = QPushButton("🗑️ Видалити")
         delete_btn.setStyleSheet(_DELETE_BTN_STYLE)
-        delete_btn.setToolTip("Remove this entry")
+        delete_btn.setToolTip("Видалити цей запис")
         delete_btn.clicked.connect(self._delete)
         btn_row.addWidget(delete_btn)
 
@@ -173,7 +173,7 @@ class DictationHistoryWindow(QMainWindow):
         self.signals = DictationHistorySignals()
         self.signals.new_entry.connect(self._on_new_entry)
 
-        self.setWindowTitle("🎙️ Dictation History")
+        self.setWindowTitle("🎙️ Історія диктування")
         self.setGeometry(100, 100, 700, 600)
         self.setStyleSheet(JARVIS_THEME_STYLESHEET)
 
@@ -194,13 +194,13 @@ class DictationHistoryWindow(QMainWindow):
         title_layout.setContentsMargins(0, 0, 0, 0)
         title_layout.setSpacing(4)
 
-        title = QLabel("🎙️ Dictation History")
+        title = QLabel("🎙️ Історія диктування")
         title.setStyleSheet(
             f"font-size: 20px; font-weight: 600; color: {COLORS['accent_secondary']};"
         )
         title_layout.addWidget(title)
 
-        self._subtitle = QLabel("No dictations yet")
+        self._subtitle = QLabel("Ще немає диктувань")
         self._subtitle.setObjectName("subtitle")
         title_layout.addWidget(self._subtitle)
 
@@ -208,8 +208,8 @@ class DictationHistoryWindow(QMainWindow):
         header_layout.addStretch()
 
         # Clear all button
-        clear_btn = QPushButton("🗑️ Clear All")
-        clear_btn.setToolTip("Delete all dictation history")
+        clear_btn = QPushButton("🗑️ Очистити все")
+        clear_btn.setToolTip("Видалити всю історію диктування")
         clear_btn.setStyleSheet(_DELETE_BTN_STYLE)
         clear_btn.clicked.connect(self._clear_all)
         header_layout.addWidget(clear_btn)
@@ -304,8 +304,8 @@ class DictationHistoryWindow(QMainWindow):
                 placeholder = self._make_empty_label()
             else:
                 placeholder = QLabel(
-                    "Dictation mode is currently disabled.\n\n"
-                    "Enable it in Settings \u2192 Features \u2192 Dictation Mode."
+                    "\u0420\u0435\u0436\u0438\u043c \u0434\u0438\u043a\u0442\u0443\u0432\u0430\u043d\u043d\u044f \u0437\u0430\u0440\u0430\u0437 \u0432\u0438\u043c\u043a\u043d\u0435\u043d\u043e.\n\n"
+                    "\u0423\u0432\u0456\u043c\u043a\u043d\u0438 \u0439\u043e\u0433\u043e \u0432 \u041d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f \u2192 \u0424\u0443\u043d\u043a\u0446\u0456\u0457 \u2192 \u0420\u0435\u0436\u0438\u043c \u0434\u0438\u043a\u0442\u0443\u0432\u0430\u043d\u043d\u044f."
                 )
                 placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 placeholder.setStyleSheet(
@@ -345,9 +345,9 @@ class DictationHistoryWindow(QMainWindow):
             old_container.deleteLater()
 
         if self._history is None or not entries:
-            self._subtitle.setText("No dictations yet")
+            self._subtitle.setText("Ще немає диктувань")
         else:
-            self._subtitle.setText(f"{len(entries)} dictation(s)")
+            self._subtitle.setText(f"диктувань: {len(entries)}")
 
     def _get_history_file_mtime(self) -> float:
         """Return the mtime of the history JSON file, or 0 if missing."""
@@ -369,7 +369,7 @@ class DictationHistoryWindow(QMainWindow):
             self._reload()
 
     def _make_empty_label(self) -> QLabel:
-        label = QLabel("Hold your dictation hotkey to start.\nTranscriptions will appear here.")
+        label = QLabel("Утримуй гарячу клавішу диктування, щоб почати.\nТранскрипції з'являтимуться тут.")
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         label.setStyleSheet(
             f"color: {COLORS['text_muted']}; font-size: 14px; padding: 40px;"
@@ -400,8 +400,8 @@ class DictationHistoryWindow(QMainWindow):
             return
         reply = QMessageBox.question(
             self,
-            "Clear Dictation History",
-            "Delete all dictation history entries?\nThis cannot be undone.",
+            "Очистити історію диктування",
+            "Видалити всі записи історії диктування?\nЦю дію не можна скасувати.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

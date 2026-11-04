@@ -223,7 +223,7 @@ class _VersionCard(QFrame):
         h_layout.addStretch()
 
         if is_latest:
-            latest_badge = QLabel("  LATEST  ")
+            latest_badge = QLabel("  НОВЕ  ")
             latest_badge.setStyleSheet(f"""
                 background-color: rgba(34, 197, 94, 0.12);
                 color: {COLORS['success']};
@@ -332,7 +332,7 @@ class _VersionCard(QFrame):
 
                     c_layout.addLayout(row)
         else:
-            placeholder = QLabel("No release notes available.")
+            placeholder = QLabel("Нотаток до випуску немає.")
             placeholder.setStyleSheet(
                 f"color: {COLORS['text_muted']}; font-size: 12px; background: transparent;"
             )
@@ -397,7 +397,7 @@ class UpdateAvailableDialog(QDialog):
         self._setup_ui()
 
     def _setup_ui(self):
-        self.setWindowTitle("Update Available")
+        self.setWindowTitle("Доступне оновлення")
         self.setMinimumSize(540, 520)
         self.setStyleSheet(JARVIS_THEME_STYLESHEET)
 
@@ -406,7 +406,7 @@ class UpdateAvailableDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
 
         # Title
-        title = QLabel("Update Available")
+        title = QLabel("Доступне оновлення")
         title.setObjectName("title")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setStyleSheet(
@@ -422,14 +422,14 @@ class UpdateAvailableDialog(QDialog):
 
         ver_col = QVBoxLayout()
         ver_col.setSpacing(4)
-        current_lbl = QLabel(f"Current version:  {self.status.current_version}")
+        current_lbl = QLabel(f"Поточна версія:  {self.status.current_version}")
         current_lbl.setObjectName("subtitle")
         ver_col.addWidget(current_lbl)
-        new_lbl = QLabel(f"New version:  {self.release.version}")
+        new_lbl = QLabel(f"Нова версія:  {self.release.version}")
         new_lbl.setStyleSheet(f"color: {COLORS['success']}; font-weight: 500;")
         ver_col.addWidget(new_lbl)
         if self.release.prerelease:
-            dev_lbl = QLabel("Development build")
+            dev_lbl = QLabel("Тестова збірка")
             dev_lbl.setStyleSheet(f"color: {COLORS['warning']}; font-size: 11px;")
             ver_col.addWidget(dev_lbl)
         info_layout.addLayout(ver_col)
@@ -467,17 +467,17 @@ class UpdateAvailableDialog(QDialog):
         # Buttons
         button_layout = QHBoxLayout()
 
-        later_btn = QPushButton("Later")
+        later_btn = QPushButton("Пізніше")
         later_btn.clicked.connect(self.reject)
         button_layout.addWidget(later_btn)
 
         button_layout.addStretch()
 
-        view_btn = QPushButton("View on GitHub")
+        view_btn = QPushButton("Переглянути на GitHub")
         view_btn.clicked.connect(self._open_github)
         button_layout.addWidget(view_btn)
 
-        update_btn = QPushButton("Update Now")
+        update_btn = QPushButton("Оновити зараз")
         update_btn.setObjectName("primary")
         update_btn.clicked.connect(self.accept)
         button_layout.addWidget(update_btn)
@@ -516,7 +516,7 @@ class UpdateProgressDialog(QDialog):
         self._connect_signals()
 
     def _setup_ui(self):
-        self.setWindowTitle("Updating Jarvis")
+        self.setWindowTitle("Оновлення Jarvis")
         self.setMinimumSize(450, 220)
         self.setWindowFlags(
             Qt.WindowType.Dialog
@@ -530,7 +530,7 @@ class UpdateProgressDialog(QDialog):
         layout.setSpacing(16)
         layout.setContentsMargins(24, 24, 24, 24)
 
-        self.title_label = QLabel("Downloading Update")
+        self.title_label = QLabel("Завантаження оновлення")
         self.title_label.setObjectName("title")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.title_label.setStyleSheet(
@@ -538,7 +538,7 @@ class UpdateProgressDialog(QDialog):
         )
         layout.addWidget(self.title_label)
 
-        self.status_label = QLabel("Preparing download...")
+        self.status_label = QLabel("Готую завантаження...")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setObjectName("subtitle")
         layout.addWidget(self.status_label)
@@ -552,7 +552,7 @@ class UpdateProgressDialog(QDialog):
 
         layout.addStretch()
 
-        self.cancel_btn = QPushButton("Cancel")
+        self.cancel_btn = QPushButton("Скасувати")
         self.cancel_btn.clicked.connect(self._cancel_download)
         layout.addWidget(self.cancel_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -588,15 +588,15 @@ class UpdateProgressDialog(QDialog):
             downloaded_mb = downloaded / (1024 * 1024)
             total_mb = total / (1024 * 1024)
             self.status_label.setText(
-                f"Downloading: {downloaded_mb:.1f} / {total_mb:.1f} MB"
+                f"Завантаження: {downloaded_mb:.1f} / {total_mb:.1f} МБ"
             )
 
     def _on_completed(self, path: str):
         self.cancel_btn.setEnabled(False)
 
         if self._pre_install_callback:
-            self.title_label.setText("Preparing Update")
-            self.status_label.setText("Saving your session...")
+            self.title_label.setText("Підготовка оновлення")
+            self.status_label.setText("Зберігаю сесію...")
             self.progress_bar.setRange(0, 0)
 
             from PyQt6.QtWidgets import QApplication
@@ -608,8 +608,8 @@ class UpdateProgressDialog(QDialog):
                 from jarvis.debug import debug_log
                 debug_log(f"Pre-install callback failed: {e}", "updater")
 
-        self.title_label.setText("Installing Update")
-        self.status_label.setText("Installing update...")
+        self.title_label.setText("Встановлення оновлення")
+        self.status_label.setText("Встановлюю оновлення...")
         self.progress_bar.setRange(0, 0)
 
         QTimer.singleShot(500, lambda: self._install(Path(path)))
@@ -618,8 +618,8 @@ class UpdateProgressDialog(QDialog):
         if install_update(download_path):
             save_installed_asset_id(self.release.asset_id)
 
-            self.title_label.setText("Update Complete")
-            self.status_label.setText("Update installed! Restarting...")
+            self.title_label.setText("Оновлення завершено")
+            self.status_label.setText("Оновлення встановлено! Перезапуск...")
             self.status_label.setStyleSheet(f"color: {COLORS['success']};")
             self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(100)
@@ -629,12 +629,12 @@ class UpdateProgressDialog(QDialog):
             self._on_error("Installation failed. Please try again or update manually.")
 
     def _on_error(self, error: str):
-        self.title_label.setText("Update Failed")
-        self.status_label.setText(f"Error: {error}")
+        self.title_label.setText("Помилка оновлення")
+        self.status_label.setText(f"Помилка: {error}")
         self.status_label.setStyleSheet(f"color: {COLORS['error']};")
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
-        self.cancel_btn.setText("Close")
+        self.cancel_btn.setText("Закрити")
         self.cancel_btn.setEnabled(True)
         self._cleanup_temp_dir()
 
@@ -658,8 +658,8 @@ def show_no_update_dialog(current_version: str, parent=None) -> None:
     """Show a dialog indicating no updates are available."""
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Information)
-    msg.setWindowTitle("No Updates Available")
-    msg.setText(f"You're running the latest version ({current_version})")
+    msg.setWindowTitle("Оновлень немає")
+    msg.setText(f"У тебе найновіша версія ({current_version})")
     msg.setStyleSheet(JARVIS_THEME_STYLESHEET)
     msg.exec()
 
@@ -668,8 +668,8 @@ def show_update_error_dialog(error: str, parent=None) -> None:
     """Show a dialog indicating an update check error."""
     msg = QMessageBox(parent)
     msg.setIcon(QMessageBox.Icon.Warning)
-    msg.setWindowTitle("Update Check Failed")
-    msg.setText("Could not check for updates")
+    msg.setWindowTitle("Не вдалося перевірити оновлення")
+    msg.setText("Не вдалося перевірити наявність оновлень")
     msg.setInformativeText(error)
     msg.setStyleSheet(JARVIS_THEME_STYLESHEET)
     msg.exec()

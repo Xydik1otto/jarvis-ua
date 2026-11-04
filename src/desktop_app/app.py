@@ -328,7 +328,7 @@ def show_crash_report_dialog(crash_content: str) -> None:
             def __init__(self, crash_info: str):
                 super().__init__()
                 self.crash_info = crash_info
-                self.setWindowTitle("🐛 Jarvis Crash Report")
+                self.setWindowTitle("🐛 Звіт про збій Jarvis")
                 self.setMinimumSize(600, 450)
                 self.setStyleSheet(JARVIS_THEME_STYLESHEET)
                 self._setup_ui()
@@ -514,7 +514,7 @@ def show_unsupported_model_dialog(model_name: str) -> bool:
                 super().__init__()
                 self.model = model
                 self.open_wizard = False
-                self.setWindowTitle("⚠️ Unsupported Model")
+                self.setWindowTitle("⚠️ Непідтримувана модель")
                 self.setMinimumWidth(500)
                 self.setStyleSheet(JARVIS_THEME_STYLESHEET)
                 self._setup_ui()
@@ -667,14 +667,14 @@ def show_instance_conflict_dialog() -> bool:
     from PyQt6.QtGui import QIcon
 
     msg = QMessageBox()
-    msg.setWindowTitle("Jarvis Already Running")
-    msg.setText("Another instance of Jarvis is already running.")
+    msg.setWindowTitle("Jarvis вже запущено")
+    msg.setText("Інша копія Jarvis вже запущена.")
     msg.setInformativeText("Would you like to close the existing instance and start a new one?")
     msg.setIcon(QMessageBox.Icon.Question)
 
     # Add custom buttons
-    kill_btn = msg.addButton("Close Existing && Start New", QMessageBox.ButtonRole.AcceptRole)
-    exit_btn = msg.addButton("Exit", QMessageBox.ButtonRole.RejectRole)
+    kill_btn = msg.addButton("Закрити наявну та запустити нову", QMessageBox.ButtonRole.AcceptRole)
+    exit_btn = msg.addButton("Вийти", QMessageBox.ButtonRole.RejectRole)
     msg.setDefaultButton(kill_btn)
 
     # Apply theme
@@ -764,7 +764,7 @@ class LogViewerWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("📝 Jarvis Logs")
+        self.setWindowTitle("📝 Логи Jarvis")
         self.setGeometry(100, 100, 900, 650)
 
         # Apply theme
@@ -789,7 +789,7 @@ class LogViewerWindow(QMainWindow):
         title_layout.setContentsMargins(0, 0, 0, 0)
         title_layout.setSpacing(4)
 
-        title = QLabel("📝 Jarvis Logs")
+        title = QLabel("📝 Логи Jarvis")
         title.setObjectName("title")
         title.setStyleSheet("font-size: 20px; font-weight: 600; color: #fbbf24;")
         title_layout.addWidget(title)
@@ -803,7 +803,7 @@ class LogViewerWindow(QMainWindow):
 
         # Clear button
         clear_btn = QPushButton("🗑️ Clear")
-        clear_btn.setToolTip("Clear all logs")
+        clear_btn.setToolTip("Очистити всі логи")
         clear_btn.setStyleSheet("""
             QPushButton {
                 background-color: #27272a;
@@ -823,7 +823,7 @@ class LogViewerWindow(QMainWindow):
 
         # Report button on the right
         report_btn = QPushButton("🐛 Report Issue")
-        report_btn.setToolTip("Report a bug or unexpected behavior on GitHub")
+        report_btn.setToolTip("Повідомити про ваду на GitHub")
         report_btn.setStyleSheet("""
             QPushButton {
                 background-color: #27272a;
@@ -932,7 +932,7 @@ class MemoryViewerWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("🧠 Jarvis Memory")
+        self.setWindowTitle("🧠 Пам'ять Jarvis")
         self.setGeometry(150, 150, 1200, 900)
 
         # Apply theme
@@ -1352,44 +1352,44 @@ class JarvisSystemTray:
         self.menu = QMenu()
 
         # Toggle listening action
-        self.toggle_action = QAction("▶️ Start Listening")
+        self.toggle_action = QAction("▶️ Почати слухати")
         self.toggle_action.triggered.connect(self.toggle_listening)
         self.menu.addAction(self.toggle_action)
 
         self.menu.addSeparator()
 
         # View logs action
-        self.logs_action = QAction("📝 View Logs")
+        self.logs_action = QAction("📝 Переглянути логи")
         self.logs_action.triggered.connect(self.show_log_viewer)
         self.menu.addAction(self.logs_action)
 
         # Memory viewer action
-        self.memory_action = QAction("🧠 Memory Viewer")
+        self.memory_action = QAction("🧠 Переглядач пам'яті")
         self.memory_action.triggered.connect(self.show_memory_viewer)
         self.menu.addAction(self.memory_action)
 
         # Dictation history action
-        self.dictation_history_action = QAction("🎙️ Dictation History")
+        self.dictation_history_action = QAction("🎙️ Історія диктування")
         self.dictation_history_action.triggered.connect(self.show_dictation_history)
         self.menu.addAction(self.dictation_history_action)
 
         # Face window action
-        self.face_action = QAction("👤 Show Face")
+        self.face_action = QAction("👤 Показати обличчя")
         self.face_action.triggered.connect(self.show_face_window)
         self.menu.addAction(self.face_action)
 
         # Setup wizard action
-        self.setup_wizard_action = QAction("🔧 Setup Wizard")
+        self.setup_wizard_action = QAction("🔧 Майстер налаштування")
         self.setup_wizard_action.triggered.connect(self.show_setup_wizard)
         self.menu.addAction(self.setup_wizard_action)
 
         # Settings action
-        self.settings_action = QAction("⚙️ Settings")
+        self.settings_action = QAction("⚙️ Налаштування")
         self.settings_action.triggered.connect(self.show_settings)
         self.menu.addAction(self.settings_action)
 
         # Check for updates action
-        self.check_updates_action = QAction("🔄 Check for Updates")
+        self.check_updates_action = QAction("🔄 Перевірити оновлення")
         self.check_updates_action.triggered.connect(lambda: self.check_for_updates(show_no_update_dialog=True))
         self.menu.addAction(self.check_updates_action)
 
@@ -1401,25 +1401,25 @@ class JarvisSystemTray:
         self.menu.addSeparator()
 
         # Open directories actions
-        self.open_config_action = QAction("📁 Open Config Directory")
+        self.open_config_action = QAction("📁 Відкрити теку конфігурації")
         self.open_config_action.triggered.connect(self.open_config_directory)
         self.menu.addAction(self.open_config_action)
 
-        self.open_data_action = QAction("💾 Open Data Directory")
+        self.open_data_action = QAction("💾 Відкрити теку даних")
         self.open_data_action.triggered.connect(self.open_data_directory)
         self.menu.addAction(self.open_data_action)
 
         self.menu.addSeparator()
 
         # Status action (non-clickable)
-        self.status_action = QAction("⚪ Status: Stopped")
+        self.status_action = QAction("⚪ Статус: зупинено")
         self.status_action.setEnabled(False)
         self.menu.addAction(self.status_action)
 
         self.menu.addSeparator()
 
         # Quit action
-        self.quit_action = QAction("🚪 Quit")
+        self.quit_action = QAction("🚪 Вихід")
         self.quit_action.triggered.connect(self.quit_app)
         self.menu.addAction(self.quit_action)
 
@@ -1560,8 +1560,8 @@ class JarvisSystemTray:
                 from PyQt6.QtWidgets import QMessageBox
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Icon.Information)
-                msg.setWindowTitle("Updates")
-                msg.setText("Auto-update is only available in the bundled desktop app.")
+                msg.setWindowTitle("Оновлення")
+                msg.setText("Автооновлення доступне лише у зібраному десктоп-застосунку.")
                 msg.setInformativeText("You're running from source. Use git pull to update.")
                 msg.setStyleSheet(JARVIS_THEME_STYLESHEET)
                 msg.exec()
@@ -1678,8 +1678,8 @@ class JarvisSystemTray:
             debug_log(f"failed to open {directory_name} directory: {e}", "desktop")
             self.log_signals.new_log.emit(f"❌ Failed to open {directory_name} directory: {str(e)}\n")
             self.tray_icon.showMessage(
-                f"Error Opening {directory_name} Directory",
-                f"Failed to open directory: {str(e)}",
+                f"Помилка відкриття теки {directory_name}",
+                f"Не вдалося відкрити теку: {str(e)}",
                 QSystemTrayIcon.MessageIcon.Warning,
                 3000
             )
@@ -1883,8 +1883,8 @@ class JarvisSystemTray:
                 self.log_signals.new_log.emit("🚀 Jarvis daemon started\n")
 
             self.is_listening = True
-            self.toggle_action.setText("⏸️ Stop Listening")
-            self.status_action.setText("🟢 Status: Listening")
+            self.toggle_action.setText("⏸️ Зупинити слухання")
+            self.status_action.setText("🟢 Статус: слухаю")
             self.update_icon()
 
             # Show log viewer when starting listening
@@ -1893,8 +1893,8 @@ class JarvisSystemTray:
             self.log_viewer.activateWindow()
 
             self.tray_icon.showMessage(
-                "Jarvis Started",
-                "Voice assistant is now listening",
+                "Jarvis запущено",
+                "Голосовий асистент тепер слухає",
                 QSystemTrayIcon.MessageIcon.Information,
                 2000
             )
@@ -1909,8 +1909,8 @@ class JarvisSystemTray:
             debug_log(f"failed to start daemon: {e}", "desktop")
             self.log_signals.new_log.emit(f"❌ Failed to start: {str(e)}\n{traceback.format_exc()}\n")
             self.tray_icon.showMessage(
-                "Error Starting Jarvis",
-                f"Failed to start: {str(e)}",
+                "Помилка запуску Jarvis",
+                f"Не вдалося запустити: {str(e)}",
                 QSystemTrayIcon.MessageIcon.Critical,
                 3000
             )
@@ -1919,8 +1919,8 @@ class JarvisSystemTray:
         """Called when daemon thread finishes."""
         if self.is_listening:
             self.is_listening = False
-            self.toggle_action.setText("▶️ Start Listening")
-            self.status_action.setText("⚪ Status: Stopped")
+            self.toggle_action.setText("▶️ Почати слухати")
+            self.status_action.setText("⚪ Статус: зупинено")
             self.update_icon()
             self.daemon_thread = None
             # Reset face to asleep so it doesn't look ready while daemon is down
@@ -2175,13 +2175,13 @@ class JarvisSystemTray:
                 self.daemon_process = None
 
             self.is_listening = False
-            self.toggle_action.setText("▶️ Start Listening")
-            self.status_action.setText("⚪ Status: Stopped")
+            self.toggle_action.setText("▶️ Почати слухати")
+            self.status_action.setText("⚪ Статус: зупинено")
             self.update_icon()
 
             self.tray_icon.showMessage(
-                "Jarvis Stopped",
-                "Voice assistant is no longer listening",
+                "Jarvis зупинено",
+                "Голосовий асистент більше не слухає",
                 QSystemTrayIcon.MessageIcon.Information,
                 2000
             )
@@ -2205,8 +2205,8 @@ class JarvisSystemTray:
                 # Thread has terminated
                 self._on_daemon_finished()
                 self.tray_icon.showMessage(
-                    "Jarvis Stopped",
-                    "Voice assistant process ended unexpectedly",
+                    "Jarvis зупинено",
+                    "Процес голосового асистента несподівано завершився",
                     QSystemTrayIcon.MessageIcon.Warning,
                     3000
                 )
@@ -2219,13 +2219,13 @@ class JarvisSystemTray:
                 self.daemon_process = None
                 if self.is_listening:
                     self.is_listening = False
-                    self.toggle_action.setText("▶️ Start Listening")
-                    self.status_action.setText("⚪ Status: Stopped")
+                    self.toggle_action.setText("▶️ Почати слухати")
+                    self.status_action.setText("⚪ Статус: зупинено")
                     self.update_icon()
 
                     self.tray_icon.showMessage(
-                        "Jarvis Stopped",
-                        "Voice assistant process ended unexpectedly",
+                        "Jarvis зупинено",
+                        "Процес голосового асистента несподівано завершився",
                         QSystemTrayIcon.MessageIcon.Warning,
                         3000
                     )
@@ -2704,8 +2704,8 @@ def main() -> int:
             # Show notification with log file location
             from PyQt6.QtWidgets import QSystemTrayIcon
             tray_instance.tray_icon.showMessage(
-                "Jarvis Started",
-                f"Crash logs available at:\n{crash_log_file}",
+                "Jarvis запущено",
+                f"Логи збою доступні за адресою:\n{crash_log_file}",
                 QSystemTrayIcon.MessageIcon.Information,
                 3000
             )
