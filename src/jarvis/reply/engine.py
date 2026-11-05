@@ -803,9 +803,9 @@ def _build_enrichment_context_hint(cfg, recent_messages: list) -> Optional[str]:
 # so a mismatch is synthesised as silence or noise. Rather than pinning every
 # install to English, ask the voice what language it speaks and constrain the
 # reply to that. Piper carries the answer in its sidecar config; Chatterbox is
-# English-only. An unknown voice falls back to English, so a default install
-# behaves exactly as before.
-_FALLBACK_REPLY_LANGUAGE = "English"
+# English-only. An unknown voice falls back to the build's primary language
+# (Ukrainian), so a fresh install still replies in the user's language.
+_FALLBACK_REPLY_LANGUAGE = "Ukrainian"
 
 
 def resolve_reply_language(cfg) -> Optional[str]:
@@ -822,7 +822,9 @@ def resolve_reply_language(cfg) -> Optional[str]:
     # leaves the language open, exactly as it did when this was hardcoded.
     engine = getattr(cfg, "tts_engine", "piper")
     if engine == "chatterbox":
-        return _FALLBACK_REPLY_LANGUAGE
+        # Chatterbox voices cannot pronounce Ukrainian; English is its only
+        # speakable reply language.
+        return "English"
     if engine != "piper":
         return None
 

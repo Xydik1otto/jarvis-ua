@@ -80,11 +80,13 @@ class TestResolveReplyLanguage:
         path = _write_voice(tmp_path, "uk_UA-ukrainian_tts-medium.onnx", "Ukrainian")
         assert resolve_reply_language(_cfg(tts_piper_model_path=path)) == "Ukrainian"
 
-    def test_unknown_voice_falls_back_to_english(self, tmp_path):
+    def test_unknown_voice_falls_back_to_ukrainian(self, tmp_path):
+        # This build is Ukrainian-first: an unreadable voice sidecar (voice
+        # not downloaded yet) falls back to the user's primary language.
         onnx = tmp_path / "mystery.onnx"
         onnx.write_bytes(b"")
         cfg = _cfg(tts_piper_model_path=str(onnx))
-        assert resolve_reply_language(cfg) == "English"
+        assert resolve_reply_language(cfg) == "Ukrainian"
 
     def test_chatterbox_is_english_only(self, tmp_path):
         # Even with a Ukrainian Piper voice on disk, Chatterbox cannot speak it.
@@ -103,7 +105,7 @@ class TestResolveReplyLanguage:
     def test_non_path_model_setting_does_not_raise(self):
         # A stubbed or malformed config must not take the reply engine down.
         cfg = _cfg(tts_piper_model_path=object())
-        assert resolve_reply_language(cfg) == "English"
+        assert resolve_reply_language(cfg) == "Ukrainian"
 
 
 # =============================================================================
@@ -120,11 +122,12 @@ class TestBuildReplyLanguageGuidance:
         assert "Ukrainian" in guidance
         assert "English" not in guidance
 
-    def test_default_install_still_says_english(self, tmp_path):
+    def test_default_install_falls_back_to_ukrainian(self, tmp_path):
         onnx = tmp_path / "not-downloaded-yet.onnx"
         guidance = build_reply_language_guidance(_cfg(tts_piper_model_path=str(onnx)))
         assert guidance is not None
-        assert "English" in guidance
+        assert "Ukrainian" in guidance
+        assert "English" not in guidance
 
     def test_no_guidance_when_tts_disabled(self):
         assert build_reply_language_guidance(_cfg(tts_enabled=False)) is None
