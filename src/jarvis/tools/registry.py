@@ -20,6 +20,11 @@ from .builtin.refresh_mcp_tools import RefreshMCPToolsTool
 from .builtin.weather import WeatherTool
 from .builtin.launch_app import LaunchAppTool
 from .builtin.ask_ai import AskAiTool
+from .builtin.timer_tool import TimerTool
+from .builtin.notes_tool import NotesTool
+from .builtin.persona_tool import PersonaTool
+from .builtin.system_stats import SystemStatsTool
+from .builtin.media_control import MediaControlTool
 from .builtin.stop import StopTool
 from .builtin.tool_search import ToolSearchTool
 from .types import ToolExecutionResult
@@ -41,6 +46,11 @@ BUILTIN_TOOLS = {
     "getWeather": WeatherTool(),
     "launchApp": LaunchAppTool(),
     "askAi": AskAiTool(),
+    "timerTool": TimerTool(),
+    "notesTool": NotesTool(),
+    "personaTool": PersonaTool(),
+    "systemStats": SystemStatsTool(),
+    "mediaControl": MediaControlTool(),
     "stop": StopTool(),
     "toolSearchTool": ToolSearchTool(),
 }

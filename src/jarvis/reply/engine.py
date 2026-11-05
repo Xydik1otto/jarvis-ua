@@ -5,12 +5,14 @@ Handles memory enrichment, tool planning and execution.
 """
 
 from __future__ import annotations
+from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
 from ..utils.redact import redact
 from ..system_prompt import build_system_prompt
 from ..tools.registry import run_tool_with_retries, generate_tools_description, generate_tools_json_schema, BUILTIN_TOOLS
 from ..tools.builtin.stop import STOP_SIGNAL
+from ..tools.builtin.persona_tool import PersonaStore
 from ..debug import debug_log
 from ..llm import (
     extract_text_from_response,
@@ -18,6 +20,38 @@ from ..llm import (
     get_llm_backend,
     ToolsNotSupportedError,
 )
+
+
+# Rough token estimate for Slavic/Cyrillic text: ~2.2 chars per token for
+# qwen-family BPE. Used to size num_ctx so the whole prompt + history + a
+# reply budget always fits. A too-small num_ctx makes Ollama truncate the
+# MIDDLE of the prompt, silently dropping the dialogue history that native
+# tool calling appends after the system message (root cause of "I never
+# told you that" recall failures and lost tool results on the 8192 default).
+_CHARS_PER_TOKEN = 2.2
+_REPLY_BUDGET_TOKENS = 1024
+_MIN_CTX = 8192
+_MAX_CTX = 32768
+
+
+def _adaptive_num_ctx(messages) -> int:
+    """Size the Ollama context window to the actual payload.
+
+    Estimates token count of every message (system prompt included) plus a
+    reply budget, rounds up to the next power-of-two step Ollama handles
+    well, clamps to sane bounds.
+    """
+    chars = 0
+    for msg in messages or []:
+        if isinstance(msg, dict):
+            chars += len(str(msg.get("content") or ""))
+            for tc in msg.get("tool_calls") or []:
+                chars += len(json.dumps(tc, ensure_ascii=False))
+    tokens = int(chars / _CHARS_PER_TOKEN) + _REPLY_BUDGET_TOKENS
+    # Round up to the next 4096 step; keep at least the old floor so tiny
+    # prompts don't shrink the window below the historical default.
+    ctx = max(_MIN_CTX, ((tokens + 4095) // 4096) * 4096)
+    return min(ctx, _MAX_CTX)
 
 
 def chat_with_messages(cfg, messages, *, timeout_sec=30.0, extra_options=None,
@@ -30,10 +64,14 @@ def chat_with_messages(cfg, messages, *, timeout_sec=30.0, extra_options=None,
     to capture every chat call rather than reaching into the backend ABC.
     """
     backend = get_llm_backend(cfg)
+    num_ctx = _adaptive_num_ctx(messages)
+    merged_extra = dict(extra_options or {})
+    merged_options = dict(merged_extra.pop("options", {}) or {})
+    merged_options.setdefault("num_ctx", num_ctx)
     return backend.chat(
         cfg.llm_chat_model, messages,
         timeout_sec=timeout_sec,
-        extra_options=extra_options,
+        extra_options={"options": merged_options, **merged_extra},
         tools=tools,
         thinking=thinking,
     )
@@ -207,12 +245,23 @@ def _text_tool_call_guidance(allowed_names: list[str]) -> str:
     for small models.
     """
     allowed_name_list = ", ".join(sorted(allowed_names)) if allowed_names else ""
+    # Use the first non-housekeeping tool for the example so the shape the
+    # model copies matches a tool it is actually about to call (qwen2.5:7b
+    # copies the example verbatim; a webSearch example next to a
+    # systemStats question read as "no tool fits here" and it refused).
+    example_name = next(
+        (n for n in sorted(allowed_names) if n not in ("stop", "toolSearchTool")),
+        "webSearch",
+    )
+    if example_name == "webSearch":
+        example_args = '{\\"search_query\\": \\"example query\\"}'
+    else:
+        example_args = "{}"
     return (
         "\nТочний синтаксис виклику інструменту (скопіюй цю форму: на ході "
         "виклику інструменту не видавай нічого іншого):\n"
         'tool_calls: [{"id": "call_1", "type": "function", "function": '
-        '{"name": "webSearch", "arguments": "{\\"search_query\\": '
-        '\\"example query\\"}"}]\n'
+        f'{{"name": "{example_name}", "arguments": "{example_args}"}}]\n'
         "Примітки:\n"
         "- `arguments` це JSON-РЯДОК (лапки екрановані), а не голий об'єкт.\n"
         "- Ніколи не видавай саме лише ім'я інструменту (наприклад `webSearch` "
@@ -317,6 +366,68 @@ def _is_malformed_model_output(content: str) -> bool:
     return False
 
 
+def _last_successful_tool_result(messages: list) -> Optional[str]:
+    """Return the most recent successful tool result from ``messages``.
+
+    Used as a last-resort reply when the model cannot phrase an answer
+    after a tool call: the raw data is more useful to the user than a
+    generic error stub. Looks at both native ``role="tool"`` results and
+    text-tools-mode ``[Tool result: name]`` user messages, skips failed
+    ones, caps the text so a huge payload does not become the reply.
+    """
+    # Planner/compound-query nudges ride inside the tool-result user message
+    # ("[Tool result: ...]\n<payload>\n\n⚠️ You have answered 1 of 2 ...");
+    # they are loop control, not user-facing data.
+    _nudge_markers = (
+        "\n\n⚠️ You have answered",
+        "\n\n[If the original query",
+    )
+    for msg in reversed(messages):
+        if not isinstance(msg, dict):
+            continue
+        if msg.get("tool_failed"):
+            continue
+        content = msg.get("content")
+        if not isinstance(content, str) or not content.strip():
+            continue
+        if msg.get("role") == "tool" and msg.get("tool_name"):
+            text = content.strip()
+            return text if len(text) <= 400 else text[:397] + "..."
+        if msg.get("role") == "user" and msg.get("tool_name"):
+            # Strip the "[Tool result: name]" preamble from text-tools mode.
+            marker = f"[Tool result: {msg['tool_name']}]"
+            text = content
+            idx = text.find(marker)
+            if idx != -1:
+                text = text[idx + len(marker):]
+            for nudge in _nudge_markers:
+                pos = text.find(nudge)
+                if pos != -1:
+                    text = text[:pos]
+            text = text.strip()
+            if text:
+                return text if len(text) <= 400 else text[:397] + "..."
+    return None
+
+
+def _resolve_known_tool_name(candidate: str, known_names: set):
+    """Match a model-emitted tool name to a known tool, tolerating case drift.
+
+    Small models emit snake_case for camelCase tool names ("system_stats"
+    for "systemStats", "timer_tool" for "timerTool") because Python-like
+    tool syntax is their strongest prior. Exact match wins first; then a
+    case-insensitive comparison on the stripped-of-separators form resolves
+    the drift. Returns the canonical known name, or None.
+    """
+    if candidate in known_names:
+        return candidate
+    normalised = re.sub(r"[\s_-]", "", candidate).lower()
+    for known in known_names:
+        if re.sub(r"[\s_-]", "", known).lower() == normalised:
+            return known
+    return None
+
+
 def _extract_text_tool_call(content_field: str, known_names: set):
     """Parse a tool call out of a content-mode LLM response.
 
@@ -361,6 +472,15 @@ def _extract_text_tool_call(content_field: str, known_names: set):
         content_field,
         re.DOTALL,
     )
+    if not tc_literal:
+        # qwen2.5:7b occasionally renames the literal to "timer_calls:",
+        # "search_calls:", etc. Any "<word>_calls: [...]" carrying a JSON
+        # array with a function object is the same shape.
+        tc_literal = re.search(
+            r"\w+_calls\s*:\s*(\[.+?\])",
+            content_field,
+            re.DOTALL,
+        )
     if tc_literal:
         raw_literal = tc_literal.group(1)
         try:
@@ -450,12 +570,34 @@ def _extract_text_tool_call(content_field: str, known_names: set):
     if not known_names:
         return None, None, None
 
-    stripped = content_field.strip()
+    # Small models occasionally prefix the tool call with a stray dot
+    # (".timerTool()") or similar punctuation; strip leading non-word chars
+    # so the toolName forms below can match.
+    stripped = content_field.strip().lstrip(".•*-· \t")
+
+    # Form: a short prose announcement naming exactly one known tool with a
+    # call-intent verb ("Викликаю systemStats."). qwen2.5:7b sometimes says
+    # it is calling a tool instead of emitting the literal; when the whole
+    # content is a single short line containing one known tool name and a
+    # call verb, treat it as that call. Guard: the tool name must appear
+    # exactly once as a whole word and the line must stay under ~120 chars,
+    # so ordinary answers mentioning a tool don't trigger spurious calls.
+    if len(stripped) <= 120:
+        _call_verbs = (
+            "виклич", "виконую", "запускаю", "викликаю",
+            "calling", "call ", "invoke", "running",
+        )
+        lowered = stripped.lower()
+        if any(v in lowered for v in _call_verbs):
+            for known in known_names:
+                pattern = re.compile(rf"\b{re.escape(known)}\b", re.IGNORECASE)
+                if len(pattern.findall(stripped)) == 1:
+                    return known, {}, f"call_{uuid.uuid4().hex[:8]}"
 
     # Form: `toolName: key: value` — only accept if the first segment is a known tool.
     m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$", stripped, re.DOTALL)
-    if m and m.group(1) in known_names:
-        name = m.group(1)
+    if m and _resolve_known_tool_name(m.group(1), known_names):
+        name = _resolve_known_tool_name(m.group(1), known_names)
         rest = m.group(2).strip()
         args: dict = {}
         for pair in re.split(r"[\n,]", rest):
@@ -471,8 +613,8 @@ def _extract_text_tool_call(content_field: str, known_names: set):
 
     # Form: `toolName(...)`
     m2 = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)\s*$", stripped, re.DOTALL)
-    if m2 and m2.group(1) in known_names:
-        name = m2.group(1)
+    if m2 and _resolve_known_tool_name(m2.group(1), known_names):
+        name = _resolve_known_tool_name(m2.group(1), known_names)
         inside = m2.group(2).strip()
         parsed_args = {}
         if inside:
@@ -668,7 +810,16 @@ def _live_time_location_string(cfg) -> str:
                 resolve_cgnat_public_ip=getattr(cfg, 'location_cgnat_resolve_public_ip', True),
                 location_cache_minutes=getattr(cfg, 'location_cache_minutes', 60),
             )
-        return f"Current local time: {format_time_context(tz_name)}. {location_context}"
+        # Say the abbreviation once and immediately give its plain Ukrainian
+        # reading: qwen2.5:7b sometimes "explains" a bare 'EET' by inventing a
+        # mixed-language expansion ('czasу东欧夏令时'); handing it the correct
+        # expansion removes the reason to improvise one.
+        return (
+            f"Current local time: {format_time_context(tz_name)} "
+            "(EET — східноєвропейський час, UTC+2). "
+            "Кажи користувачу просто «за київським часом». "
+            f"{location_context}"
+        )
     except Exception as e:
         debug_log(f"live time/location lookup failed: {e}", "memory")
         return ""
@@ -871,6 +1022,44 @@ def build_user_profile_block(cfg) -> Optional[str]:
         lines.append(f"- Як спілкуватися з користувачем: {style}")
     if goals:
         lines.append(f"- Поточні задачі та цілі користувача: {goals}")
+    return "\n".join(lines)
+
+
+def build_persona_block(cfg) -> Optional[str]:
+    """Render the personaTool profile block, if any.
+
+    Sourced from ``~/.local/share/jarvis/persona.json`` (facts the user
+    asked the assistant to remember about itself: name, address, style,
+    profession, likes). Unlike the learned warm-profile from the graph,
+    this is explicit and authoritative. Returns None when the store is
+    empty, so a fresh install injects nothing.
+    """
+    path = getattr(cfg, "persona_path", None)
+    # Stub cfgs in tests hand back a Mock for every attribute; only a real
+    # path-like value counts, anything else means "no persona configured".
+    if not isinstance(path, (str, Path)):
+        return None
+    store = PersonaStore(path=Path(path))
+    snapshot = store.snapshot()
+    if not snapshot:
+        return None
+    lines = [
+        "ПРОФІЛЬ КОРИСТУВАЧА (запам'ятані факти, дотримуйся їх у кожній відповіді):"
+    ]
+    if snapshot.get("name"):
+        lines.append(f"- Ім'я користувача: {snapshot['name']}")
+    if snapshot.get("address_name"):
+        lines.append(f"- Звертання до користувача: {snapshot['address_name']}")
+    if snapshot.get("communication_style"):
+        lines.append(f"- Стиль спілкування: {snapshot['communication_style']}")
+    if snapshot.get("profession"):
+        lines.append(f"- Професія: {snapshot['profession']}")
+    if snapshot.get("favourite_topics"):
+        topics = ", ".join(snapshot["favourite_topics"])
+        lines.append(f"- Улюблені теми: {topics}")
+    if snapshot.get("preferences"):
+        prefs = ", ".join(snapshot["preferences"])
+        lines.append(f"- Вподобайки: {prefs}")
     return "\n".join(lines)
 
 
@@ -1520,6 +1709,10 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
     # Explicit user-set personalisation (tone + goals). Authoritative and
     # always present, unlike the learned warm profile below.
     _user_profile_block = build_user_profile_block(cfg)
+    # Facts the user asked the assistant to remember about itself via
+    # personaTool (name, address, style, profession, likes). Read once per
+    # turn: a personaTool call takes effect from the next turn onwards.
+    _persona_block = build_persona_block(cfg)
 
     def _build_initial_system_message() -> str:
         guidance = [_persona_prompt.strip()]
@@ -1536,6 +1729,11 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
         # warm profile so hand-set preferences win over extracted ones.
         if _user_profile_block:
             guidance.append("\n" + _user_profile_block)
+
+        # personaTool facts (name, address, style, likes). Same tier as the
+        # explicit profile: user-asked, so it outranks anything learned.
+        if _persona_block:
+            guidance.append("\n" + _persona_block)
 
         if warm_profile_block:
             # Pre-query, query-agnostic user context. Lives OUTSIDE the
@@ -1613,6 +1811,19 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
             # like `wikipedia.run` or `google.search` — gemma models have strong
             # priors to emit those even when they aren't in the tool list.
             guidance.append(_text_tool_call_guidance(list(known_tool_names)))
+            # Final-position action directive. Everything above describes the
+            # protocol; this one line, sitting at the very end of the system
+            # message where attention is strongest before generation, tells
+            # the model to actually EMIT the call instead of narrating it
+            # ("викликаю systemStats..." in prose was the observed failure).
+            guidance.append(
+                "\nГОЛОВНЕ ПРАВИЛО ДІЇ: якщо будь-який інструмент зі списку вище "
+                "може відповісти на запит користувача чи виконати його прохання, "
+                "твоя відповідь у цьому ході має бути ЛИШЕ блоком tool_calls: [...] "
+                "з викликом того інструменту. НЕ описуй інструмент словами, НЕ "
+                "повідомляй, що можна перевірити чи викликати щось: або видай блок "
+                "tool_calls зараз, або дай пряму відповідь з того, що вже знаєш."
+            )
         # else: tools are passed via the native tools API parameter — do not include tools_desc
         # here as well, since that confuses the model and causes it to not use tools properly.
 
@@ -1735,6 +1946,27 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
         """
         context_str = _get_context_string()
 
+        # Deterministic time anchoring: qwen2.5:7b-instruct (Q4_K_M) answered
+        # time questions with invented dates even with the [Context] line and
+        # a hard prompt rule present, because a 24 KB system prompt buries
+        # both. Re-stamping the CURRENT user message with the same ground
+        # truth puts the fact a few tokens above where generation starts.
+        # A two-line recall reminder rides along for the same reason.
+        if context_str:
+            for msg in reversed(messages_list):
+                if msg.get("role") == "user":
+                    body = msg.get("content", "") or ""
+                    if isinstance(body, str) and not body.startswith("[Поточний час:"):
+                        stamp = (
+                            f"[Поточний час: {context_str}]\n"
+                            "[Пам'ять: те, що користувач сказав у попередніх ходах "
+                            "вище (наприклад свій улюблений колір), ти вже знаєш — "
+                            "відповідай з історії, не обіцяй «знайду»]\n\n"
+                        )
+                        msg["content"] = stamp + body
+                        msg["_time_stamped"] = True
+                    break
+
         # Find and update the first system message (skip tool guidance messages)
         for msg in messages_list:
             if (msg.get("role") == "system" and
@@ -1805,6 +2037,8 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
 
     # Per-reply counter for toolSearchTool invocations (F5 cap).
     tool_search_calls = 0
+    _empty_retry_used = False
+    _malformed_retry_used = False
     try:
         tool_search_cap = int(getattr(cfg, "tool_search_max_calls", 3))
     except (TypeError, ValueError):
@@ -2125,6 +2359,23 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
             # Thinking-only turn: let the model continue reasoning
             if thinking:
                 debug_log("  🧠 Thinking step (no action needed)", "planning")
+                continue
+
+            # Small models on Q4 quantisation occasionally return a bare
+            # empty message right after a tool result lands. One retry of
+            # the same request (without the empty assistant message) recovers
+            # it; without this the user gets the "trouble understanding"
+            # fallback even though the tool succeeded.
+            if not _empty_retry_used:
+                _empty_retry_used = True
+                debug_log(
+                    "  🔄 Empty assistant response after tool result — retrying once",
+                    "planning",
+                )
+                if messages and messages[-1].get("role") == "assistant" and not (
+                    messages[-1].get("content") or ""
+                ).strip():
+                    messages.pop()
                 continue
 
             debug_log("  ⚠️ Empty assistant response with no tool calls", "planning")
@@ -2455,15 +2706,33 @@ def run_reply_engine(db: "Database", cfg, tts: Optional[Any],
             malformed_fallback = False
         elif _is_malformed_json_response(content):
             debug_log(f"  ⚠️ Malformed content — delivering error reply: '{content[:80]}...'", "planning")
+            # One retry before giving up: malformed output is stochastic on
+            # small Q4 models, and a second sample usually lands clean.
+            if not _malformed_retry_used:
+                _malformed_retry_used = True
+                debug_log(
+                    "  🔄 Malformed content — retrying once without the bad turn",
+                    "planning",
+                )
+                if messages and messages[-1].get("role") == "assistant":
+                    messages.pop()
+                continue
+            # Still malformed after the retry: if a tool already delivered
+            # data this turn, surface that raw result instead of a useless
+            # "I had trouble" stub — the data is what the user asked for.
             model_name = cfg.llm_chat_model.lower()
             is_small = any(s in model_name for s in [":1b", ":3b", ":7b", "-1b", "-3b", "-7b"])
-            candidate_reply = (
-                "I had trouble understanding that request. "
-                "This can happen with smaller AI models. "
-                "You can switch to a more capable model through the Setup Wizard in the menu bar."
-                if is_small else
-                "I had trouble understanding that request. Could you try rephrasing it?"
-            )
+            _tool_fallback = _last_successful_tool_result(messages)
+            if _tool_fallback:
+                candidate_reply = f"📊 {_tool_fallback}"
+            else:
+                candidate_reply = (
+                    "I had trouble understanding that request. "
+                    "This can happen with smaller AI models. "
+                    "You can switch to a more capable model through the Setup Wizard in the menu bar."
+                    if is_small else
+                    "I had trouble understanding that request. Could you try rephrasing it?"
+                )
             malformed_fallback = True
         else:
             candidate_reply = content

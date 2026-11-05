@@ -276,7 +276,7 @@ class StateManager:
                 self._hot_window_start_time = time.time()
                 debug_log("hot window reactivated (expired during echo processing)", "state")
                 try:
-                    print(f"👂 Listening for follow-up ({int(self.hot_window_seconds)}s)...", flush=True)
+                    print(f"👂 Слухаю продовження ({int(self.hot_window_seconds)} с)...", flush=True)
                 except Exception:
                     pass
             else:
@@ -319,7 +319,7 @@ class StateManager:
 
             # Always show user-facing output
             try:
-                print("💤 Returning to wake word mode\n", flush=True)
+                print("💤 Повертаюсь до режиму слова-активатора\n", flush=True)
             except Exception:
                 pass
 
@@ -387,9 +387,9 @@ class StateManager:
 
             # Always show user-facing output
             try:
-                print(f"👂 Listening for follow-up ({int(self.hot_window_seconds)}s)...", flush=True)
+                print(f"👂 Слухаю продовження ({int(self.hot_window_seconds)} с)...", flush=True)
             except Exception as e:
-                debug_log(f"failed to print hot window message: {e}", "state")
+                debug_log(f"failed to print follow-up window message: {e}", "state")
 
             # Schedule the expiry timer now that hot window is active
             self._schedule_hot_window_expiry()
@@ -450,7 +450,7 @@ class StateManager:
 
             # Always show user-facing output
             try:
-                print("💤 Returning to wake word mode\n", flush=True)
+                print("💤 Повертаюсь до режиму слова-активатора\n", flush=True)
             except Exception:
                 pass
 
@@ -487,7 +487,7 @@ class StateManager:
 
             # Always show user-facing output
             try:
-                print("💤 Returning to wake word mode", flush=True)
+                print("💤 Повертаюсь до режиму слова-активатора", flush=True)
             except Exception:
                 pass
 

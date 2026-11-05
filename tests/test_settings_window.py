@@ -224,10 +224,11 @@ class TestCategories:
     def test_every_category_has_fields(self):
         """Every defined category should have at least one field.
 
-        The 'mcps' category uses a custom page, not FIELD_METADATA, so it's excluded.
+        The 'mcps' and 'appearance' categories use custom pages, not
+        FIELD_METADATA, so they're excluded.
         """
         cats_with_fields = {fm.category for fm in FIELD_METADATA}
-        custom_page_categories = {"mcps"}
+        custom_page_categories = {"mcps", "appearance"}
         for key, label in CATEGORIES:
             if key in custom_page_categories:
                 continue

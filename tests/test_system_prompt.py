@@ -46,3 +46,19 @@ class TestBuildSystemPrompt:
     def test_prompt_has_no_em_dashes(self):
         prompt = build_system_prompt()
         assert "\u2014" not in prompt
+
+    def test_prompt_states_time_ground_truth_rule(self):
+        """The [Context: ...] line carries the real time, yet the model
+        ignored it and invented a date. A firm authority rule for that line
+        must exist in the persona prompt."""
+        prompt = build_system_prompt()
+        assert "[Context" in prompt
+        assert "не вигадуй" in prompt.lower()
+
+    def test_prompt_states_recall_first_rule(self):
+        """The prior turn is present in the message list, yet the model
+        answered a recall question by promising a future action. The persona
+        prompt must demand answering from history in the same turn."""
+        prompt = build_system_prompt()
+        assert "обіцянкою" in prompt
+        assert "цьому самому ході" in prompt

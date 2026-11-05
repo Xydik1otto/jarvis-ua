@@ -42,6 +42,44 @@ VOICE_STYLE = (
 )
 
 
+# Ground-truth context rule: the [Context: ...] line prepended to the system
+# message each turn carries the live local time, date, weekday and location.
+# Field testing (qwen2.5:7b-instruct) showed the model ignoring that line and
+# answering a time question with an invented date, so the authority of the
+# line is stated firmly, as its own component, rather than left implicit.
+CONTEXT_GROUND_TRUTH = (
+    "ДЖЕРЕЛО ПРАВДИ ПРО ЧАС І ЛОКАЦІЮ:\n"
+    "Рядок [Context: ...] на початку цього системного повідомлення оновлюється "
+    "кожного ходу і є єдиним авторитетним джерелом поточної дати, дня тижня, "
+    "часу й локації. Відповідаючи на питання про час, дату чи день тижня, "
+    "використовуй ЛИШЕ значення з цього рядка, сформульоване природною мовою "
+    "користувача. НІКОЛИ не вигадуй дату, час, день тижня чи рік і не бери їх "
+    "із попередніх знань, навіть якщо здається, що ти знаєш: твої внутрішні "
+    "уявлення про «сьогодні» застарілі й хибні. Якщо рядок [Context: ...] "
+    "присутній, точна відповідь у тебе вже є, і вигадане значення часу це "
+    "заборонена відповідь. Ніколи не кажи, що не маєш доступу до годинника "
+    "або що тобі потрібна локація користувача: вони в тебе вже є."
+)
+
+# Recall-first rule: the recent dialogue already sits in the message list,
+# yet the model answered a recall question («Який мій улюблений колір?») by
+# promising to look the answer up later instead of reading the turn right
+# above. Stated as an absolute ban on announced-but-not-executed actions.
+RECALL_FIRST = (
+    "ВІДПОВІДАЙ З ТОГО, ЩО ВЖЕ Є:\n"
+    "Якщо відповідь на запитання користувача вже є в історії розмови вище або "
+    "в блоках пам'яті в цьому системному повідомленні, відповідай нею ОДРАЗУ "
+    "в цьому самому ході. НІКОЛИ не відповідай обіцянкою майбутньої дії на "
+    "кшталт «зараз завантажу», «зараз знайду», «дай перевірю», «зараз "
+    "подивлюся»: або відповідай прямо, або виклич відповідний інструмент у "
+    "цьому самому ході. Оголосити дію, не виконавши її, це заборонена "
+    "відповідь. Коли користувач розповів факт у попередньому ході (наприклад, "
+    "назвав свій улюблений колір), цей факт уже відомий тобі: у пізніших "
+    "ходах згадуй його з історії чи пам'яті, без пошуків у зовнішніх "
+    "джерелах."
+)
+
+
 @dataclass
 class PromptComponents:
     """
@@ -50,6 +88,8 @@ class PromptComponents:
     All components are combined in _build_initial_system_message() to form
     the complete system message.
     """
+    context_ground_truth: str
+    recall_first: str
     asr_note: str
     inference_guidance: str
     tool_incentives: str
@@ -58,8 +98,16 @@ class PromptComponents:
     tool_constraints: Optional[str] = None  # Only for small models
 
     def to_list(self) -> list[str]:
-        """Convert to list of non-empty prompt strings."""
+        """Convert to list of non-empty prompt strings.
+
+        The grounding and recall rules come first: they read immediately
+        after the persona prose, before the long tool sections, so a small
+        model meets them while its attention is still at the top of the
+        prompt (primacy).
+        """
         components = [
+            self.context_ground_truth,
+            self.recall_first,
             self.asr_note,
             self.inference_guidance,
             self.tool_incentives,

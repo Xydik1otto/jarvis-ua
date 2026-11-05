@@ -7,8 +7,11 @@ deep space theme with amber accents.
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import tempfile
+from pathlib import Path
 
 # Color palette
 COLORS = {
@@ -525,9 +528,245 @@ def _ensure_icons() -> dict[str, str]:
     return paths
 
 
-def apply_theme(widget) -> None:
-    """Apply the Jarvis theme to a Qt widget, including SVG-based indicator icons."""
+def apply_theme(widget, colors: dict | None = None) -> None:
+    """Apply the Jarvis theme to a Qt widget, including SVG-based indicator icons.
+
+    When ``colors`` is given, the stylesheet is regenerated from those
+    colours so a theme change applies immediately, without a restart.
+    """
     icons = _ensure_icons()
     icon_css = _ICON_STYLESHEET_TEMPLATE.format(**icons)
-    widget.setStyleSheet(JARVIS_THEME_STYLESHEET + icon_css)
+    if colors is None:
+        widget.setStyleSheet(JARVIS_THEME_STYLESHEET + icon_css)
+    else:
+        widget.setStyleSheet(build_stylesheet(colors) + icon_css)
+
+
+# ---------------------------------------------------------------------------
+# Theme store: built-in themes and user presets
+# ---------------------------------------------------------------------------
+
+DEFAULT_THEME_NAME = "Jarvis (базова)"
+
+# Built-in presets: {name: {color key: override}}. Overrides are merged over
+# COLORS, so a preset only lists the colours it changes. Names are Ukrainian
+# (user-facing). Do not edit these names: user presets may not shadow them.
+BUILTIN_THEMES: dict[str, dict[str, str]] = {
+    DEFAULT_THEME_NAME: {},
+    "Смарагдова": {
+        "accent_primary": "#10b981",
+        "accent_secondary": "#34d399",
+        "accent_muted": "#065f46",
+    },
+    "Багряна ніч": {
+        "accent_primary": "#f43f5e",
+        "accent_secondary": "#fb7185",
+        "accent_muted": "#9f1239",
+    },
+    "Лазурна": {
+        "accent_primary": "#38bdf8",
+        "accent_secondary": "#7dd3fc",
+        "accent_muted": "#075985",
+    },
+}
+
+# Colour keys the theme editor exposes (single hex values only; the rgba
+# glow entries are derived from accent_primary at stylesheet build time).
+EDITABLE_COLOR_KEYS = (
+    "accent_primary",
+    "accent_secondary",
+    "bg_primary",
+    "bg_secondary",
+    "bg_tertiary",
+    "bg_card",
+    "bg_hover",
+    "text_primary",
+    "text_secondary",
+    "text_muted",
+    "border",
+)
+
+# Ukrainian labels for the colour pickers (no em dashes, per house style).
+THEME_COLOR_LABELS = {
+    "accent_primary": "Акцент",
+    "accent_secondary": "Світлий акцент",
+    "bg_primary": "Фон",
+    "bg_secondary": "Фон панелей",
+    "bg_card": "Фон карток",
+    "text_primary": "Текст",
+    "text_secondary": "Другорядний текст",
+    "border": "Межі",
+}
+
+# Base hex of every solid colour, used for substitution when rebuilding
+# the stylesheet. Shared values (accent_primary also drives warning) move
+# together: the stylesheet stores literal hexes, so they cannot be split.
+_BASE_HEX = {key: value for key, value in COLORS.items() if not value.startswith("rgba")}
+
+_HEX_RE = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+_GLOW_ALPHA_15 = "rgba(245, 158, 11, 0.15)"
+_GLOW_ALPHA_30 = "rgba(245, 158, 11, 0.3)"
+
+
+def _default_themes_path() -> Path:
+    """Return the default preset store path, mirroring the notes store."""
+    return Path.home() / ".local" / "share" / "jarvis" / "themes.json"
+
+
+def get_themes_path() -> Path:
+    """Resolve the themes.json path; JARVIS_THEMES_PATH overrides it (tests)."""
+    env_path = os.environ.get("JARVIS_THEMES_PATH")
+    if env_path:
+        return Path(env_path)
+    return _default_themes_path()
+
+
+def validate_hex(value: object) -> bool:
+    """True when ``value`` is a #rgb or #rrggbb colour literal."""
+    if not isinstance(value, str):
+        return False
+    return bool(_HEX_RE.match(value.strip()))
+
+
+def normalise_hex(value: str) -> str:
+    """Lower-case a hex colour and expand #abc to #aabbcc."""
+    trimmed = value.strip().lower()
+    if len(trimmed) == 4:
+        trimmed = "#" + "".join(ch * 2 for ch in trimmed[1:])
+    return trimmed
+
+
+def load_theme_store(path: Path | str | None = None) -> dict:
+    """Load {active_theme, custom_presets} from themes.json, tolerating
+    missing or corrupt files by returning the empty default store."""
+    path = Path(path) if path else get_themes_path()
+    store: dict = {"active_theme": DEFAULT_THEME_NAME, "custom_presets": {}}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return store
+    if not isinstance(data, dict):
+        return store
+    presets = data.get("custom_presets")
+    if isinstance(presets, dict):
+        store["custom_presets"] = {
+            str(name): entry for name, entry in presets.items() if isinstance(entry, dict)
+        }
+    active = data.get("active_theme")
+    if isinstance(active, str) and active:
+        store["active_theme"] = active
+    return store
+
+
+def save_theme_store(store: dict, path: Path | str | None = None) -> None:
+    """Persist the store atomically: temp file in the same dir, os.replace."""
+    path = Path(path) if path else get_themes_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(store, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
+def get_theme_colors(name: str, path: Path | str | None = None) -> dict:
+    """Return the full colour palette for a built-in or custom theme."""
+    if name in BUILTIN_THEMES:
+        colors = dict(COLORS)
+        colors.update(BUILTIN_THEMES[name])
+        return colors
+    preset = load_theme_store(path=path)["custom_presets"].get(name)
+    if isinstance(preset, dict):
+        colors = dict(COLORS)
+        colors.update({
+            key: value for key, value in preset.get("colors", {}).items()
+            if key in _BASE_HEX
+        })
+        return colors
+    return dict(COLORS)
+
+
+def list_theme_names(path: Path | str | None = None) -> list:
+    """Built-in theme names followed by the user's custom presets."""
+    custom = sorted(load_theme_store(path=path)["custom_presets"])
+    return list(BUILTIN_THEMES) + custom
+
+
+def save_custom_preset(
+    name: str, colors: dict, path: Path | str | None = None
+) -> str:
+    """Save a user preset under ``name``; returns the normalised name.
+
+    Only editable colour keys are stored, hex values are validated and
+    normalised. Raises ValueError on an empty name, a name that shadows a
+    built-in theme, or an invalid hex value.
+    """
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("Введи назву пресету.")
+    if name in BUILTIN_THEMES:
+        raise ValueError(f"Назва «{name}» вже зайнята вбудованою темою.")
+    clean: dict[str, str] = {}
+    for key in EDITABLE_COLOR_KEYS:
+        if key in colors and colors[key]:
+            value = str(colors[key]).strip()
+            if not validate_hex(value):
+                raise ValueError(f"Некоректний колір для «{key}»: {value}")
+            clean[key] = normalise_hex(value)
+    store = load_theme_store(path=path)
+    store["custom_presets"][name] = {"base": DEFAULT_THEME_NAME, "colors": clean}
+    save_theme_store(store, path=path)
+    return name
+
+
+def delete_custom_preset(name: str, path: Path | str | None = None) -> bool:
+    """Remove a user preset; built-in and unknown names are refused."""
+    if name in BUILTIN_THEMES:
+        return False
+    store = load_theme_store(path=path)
+    if name not in store["custom_presets"]:
+        return False
+    del store["custom_presets"][name]
+    if store["active_theme"] == name:
+        store["active_theme"] = DEFAULT_THEME_NAME
+    save_theme_store(store, path=path)
+    return True
+
+
+def set_active_theme(name: str, path: Path | str | None = None) -> None:
+    """Persist the active theme selection."""
+    store = load_theme_store(path=path)
+    store["active_theme"] = name
+    save_theme_store(store, path=path)
+
+
+def get_active_theme_name(path: Path | str | None = None) -> str:
+    """Return the persisted active theme name."""
+    return load_theme_store(path=path)["active_theme"]
+
+
+def _derive_glow(hex_value: str, alpha: str) -> str:
+    """Build an rgba(...) glow string from a hex colour."""
+    digits = hex_value.lstrip("#")
+    r, g, b = int(digits[0:2], 16), int(digits[2:4], 16), int(digits[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
+def build_stylesheet(colors: dict) -> str:
+    """Regenerate the theme stylesheet for the given colours.
+
+    Literal base hexes in JARVIS_THEME_STYLESHEET are substituted with the
+    requested values; untouched colours keep their base values. The amber
+    rgba glows are re-derived from accent_primary.
+    """
+    css = JARVIS_THEME_STYLESHEET
+    accent = normalise_hex(str(colors.get("accent_primary", COLORS["accent_primary"])))
+    for key, base in _BASE_HEX.items():
+        value = colors.get(key, base)
+        if value != base:
+            css = css.replace(base, value)
+    if accent != COLORS["accent_primary"]:
+        css = css.replace(_GLOW_ALPHA_15, _derive_glow(accent, "0.15"))
+        css = css.replace(_GLOW_ALPHA_30, _derive_glow(accent, "0.3"))
+    return css
 

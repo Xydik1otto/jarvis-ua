@@ -28,7 +28,18 @@ from jarvis.config import (
     SUPPORTED_CHAT_MODELS,
 )
 from jarvis.debug import debug_log
-from desktop_app.themes import apply_theme
+from desktop_app.themes import (
+    apply_theme,
+    delete_custom_preset,
+    get_active_theme_name,
+    get_theme_colors,
+    list_theme_names,
+    load_theme_store,
+    save_custom_preset,
+    set_active_theme,
+    DEFAULT_THEME_NAME,
+    THEME_COLOR_LABELS,
+)
 from desktop_app.mcp_catalogue import CATALOGUE, CATALOGUE_BY_NAME, MCPEntry
 
 
@@ -69,6 +80,7 @@ CATEGORIES = [
     ("features", "✨ Функції"),
     ("mcps", "🔌 MCP-сервери"),
     ("advanced", "🔧 Додатково"),
+    ("appearance", "🎨 Вигляд і тема"),
 ]
 
 
@@ -302,6 +314,9 @@ def _build_field_metadata() -> List[FieldMeta]:
     f("hot_window_seconds", "Тривалість гарячого вікна",
       "Тривалість вікна для уточнення",
       "timing", "float", min_val=1.0, max_val=30.0, step=0.5, suffix="s")
+    f("followup_window_seconds", "Вікно продовження",
+      "Скільки секунд після відповіді Джарвіс слухає продовження без слова-активатора (0 — вимкнено)",
+      "timing", "float", min_val=0.0, max_val=120.0, step=1.0, suffix="s")
     f("transcript_buffer_duration_sec", "Буфер транскрипту",
       "Тривалість історії транскрипту для визначення наміру",
       "timing", "float", min_val=10, max_val=600, step=10, suffix="s")
@@ -470,7 +485,9 @@ class SettingsWindow(QDialog):
             fields_by_cat.setdefault(fm.category, []).append(fm)
 
         for cat_key, cat_label in CATEGORIES:
-            if cat_key == "mcps":
+            if cat_key == "appearance":
+                page = self._build_theme_page()
+            elif cat_key == "mcps":
                 page = self._build_mcp_page()
             else:
                 cat_fields = fields_by_cat.get(cat_key, [])
@@ -879,6 +896,182 @@ class SettingsWindow(QDialog):
         if reply == QMessageBox.StandardButton.Yes:
             del self._mcp_configs[name]
             self._refresh_mcp_list()
+
+    # -- Theme editor page --------------------------------------------------
+    #
+    # Appearance section: pick a built-in theme, edit accent/background/text
+    # colours live, save and delete custom presets. Colour previews use an
+    # inline stylesheet on purpose: the swatch must show the colour being
+    # picked, not the theme's own button styling.
+
+    def _build_theme_page(self) -> QWidget:
+        """Build the appearance page."""
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
+
+        desc = QLabel(
+            "Обери вбудовану тему або зміни кольори й збережи власний пресет. "
+            "Зміни застосовуються одразу, без перезапуску."
+        )
+        desc.setWordWrap(True)
+        desc.setStyleSheet("color: #a1a1aa; font-size: 13px;")
+        layout.addWidget(desc)
+
+        # Theme choice
+        theme_row = QHBoxLayout()
+        theme_label = QLabel("Тема")
+        self._theme_combo = QComboBox()
+        self._theme_combo.setMinimumWidth(220)
+        self._reload_theme_combo()
+        self._theme_combo.currentIndexChanged.connect(self._on_theme_selected)
+        theme_row.addWidget(theme_label)
+        theme_row.addWidget(self._theme_combo)
+        theme_row.addStretch()
+        layout.addLayout(theme_row)
+
+        # Colour pickers for the current theme
+        color_group = QGroupBox("Кольори поточної теми")
+        form = QFormLayout(color_group)
+        form.setSpacing(10)
+        self._color_buttons: Dict[str, QPushButton] = {}
+        for key, label in THEME_COLOR_LABELS.items():
+            btn = QPushButton()
+            btn.setFixedHeight(32)
+            self._update_color_button(btn, self._theme_colors.get(key, "#000000"))
+            btn.clicked.connect(lambda _=False, k=key, b=btn: self._on_pick_color(k, b))
+            self._color_buttons[key] = btn
+            form.addRow(label, btn)
+        layout.addWidget(color_group)
+
+        # Actions
+        btn_layout = QHBoxLayout()
+        apply_btn = QPushButton("🎨 Застосувати")
+        apply_btn.clicked.connect(self._on_theme_apply)
+        save_btn = QPushButton("💾 Зберегти пресет")
+        save_btn.setObjectName("primary")
+        save_btn.clicked.connect(self._on_theme_save_preset)
+        delete_btn = QPushButton("− Вилучити пресет")
+        delete_btn.setObjectName("danger")
+        delete_btn.clicked.connect(self._on_theme_delete_preset)
+        btn_layout.addWidget(apply_btn)
+        btn_layout.addWidget(save_btn)
+        btn_layout.addWidget(delete_btn)
+        btn_layout.addStretch()
+        layout.addLayout(btn_layout)
+        layout.addStretch()
+
+        scroll.setWidget(container)
+        return scroll
+
+    def _reload_theme_combo(self, selected: str = "") -> None:
+        """Rebuild the theme combo from built-ins plus the user's presets."""
+        self._theme_combo.blockSignals(True)
+        self._theme_combo.clear()
+        if not selected:
+            selected = get_active_theme_name()
+        custom = set(load_theme_store()["custom_presets"])
+        for name in list_theme_names():
+            display = f"★ {name}" if name in custom else name
+            self._theme_combo.addItem(display, name)
+        idx = self._theme_combo.findData(selected)
+        self._theme_combo.setCurrentIndex(idx if idx >= 0 else 0)
+        self._active_theme_name = self._theme_combo.currentData()
+        self._theme_colors = get_theme_colors(self._active_theme_name)
+        self._theme_combo.blockSignals(False)
+
+    def _update_color_button(self, btn: QPushButton, hex_value: str) -> None:
+        """Show a colour swatch button with the current hex caption."""
+        btn.setText(hex_value)
+        btn.setStyleSheet(f"QPushButton {{ background-color: {hex_value}; }}")
+
+    def _refresh_color_buttons(self) -> None:
+        """Sync every swatch button with the current colour palette."""
+        for key, btn in self._color_buttons.items():
+            self._update_color_button(btn, self._theme_colors.get(key, "#000000"))
+
+    def _apply_theme_live(self) -> None:
+        """Re-apply the current colours to this window without a restart."""
+        apply_theme(self, colors=self._theme_colors)
+        set_active_theme(self._active_theme_name)
+
+    def _on_theme_selected(self, index: int) -> None:
+        """Switch to the selected theme and apply it immediately."""
+        name = self._theme_combo.itemData(index)
+        if not name:
+            return
+        self._active_theme_name = name
+        self._theme_colors = get_theme_colors(name)
+        self._refresh_color_buttons()
+        self._apply_theme_live()
+
+    def _on_pick_color(self, key: str, btn: QPushButton) -> None:
+        """Open a colour picker and live-preview the chosen colour."""
+        from PyQt6.QtGui import QColor
+        from PyQt6.QtWidgets import QColorDialog
+
+        current = QColor(self._theme_colors.get(key, "#000000"))
+        color = QColorDialog.getColor(current, self, "Обери колір")
+        if color.isValid():
+            hex_value = color.name()
+            self._theme_colors[key] = hex_value
+            self._update_color_button(btn, hex_value)
+            self._apply_theme_live()
+
+    def _on_theme_apply(self) -> None:
+        """Apply the edited colours and confirm to the user."""
+        self._apply_theme_live()
+        QMessageBox.information(
+            self, "🎨 Тему застосовано",
+            "Тему застосовано до вікна налаштувань. Інші вікна підхоплять її "
+            "під час відкриття.",
+        )
+
+    def _on_theme_save_preset(self) -> None:
+        """Save the edited colours as a custom preset."""
+        name, ok = QInputDialog.getText(
+            self, "💾 Новий пресет", "Назва пресету:",
+        )
+        if not ok:
+            return
+        try:
+            name = save_custom_preset(name, self._theme_colors)
+        except ValueError as exc:
+            QMessageBox.warning(self, "⚠️ Помилка", str(exc))
+            return
+        set_active_theme(name)
+        self._active_theme_name = name
+        self._theme_colors = get_theme_colors(name)
+        self._reload_theme_combo(selected=name)
+        self._refresh_color_buttons()
+        self._apply_theme_live()
+
+    def _on_theme_delete_preset(self) -> None:
+        """Delete the selected preset, built-in themes are refused."""
+        name = self._active_theme_name
+        if name not in load_theme_store()["custom_presets"]:
+            QMessageBox.information(
+                self, "− Вилучити пресет",
+                "Обери власний пресет у списку, щоб його вилучити.",
+            )
+            return
+        reply = QMessageBox.question(
+            self, "− Вилучити пресет",
+            f"Вилучити пресет «{name}»?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        delete_custom_preset(name)
+        self._reload_theme_combo(selected=DEFAULT_THEME_NAME)
+        self._refresh_color_buttons()
+        self._apply_theme_live()
 
     # -- Value extraction ---------------------------------------------------
 

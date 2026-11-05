@@ -155,3 +155,13 @@ These fields are managed elsewhere or are too complex for a simple form:
 - `voice_debug` — environment variable only
 - `whisper_min_audio_duration` / `whisper_min_word_length` — rarely changed advanced params
 - `vad_frame_ms` / `vad_pre_roll_ms` — low-level VAD timing
+
+## Appearance Page (theme editor)
+
+The `appearance` category ("🎨 Вигляд і тема") uses a custom page, not
+FIELD_METADATA. It offers: built-in theme selection, live colour editing
+of the current theme (accent/background/text swatches with colour
+pickers), saving custom presets under a user-chosen name, and deleting
+them. Persistence lives in `themes.py` (see `themes.spec.md`): atomic
+JSON at `~/.local/share/jarvis/themes.json`. Theme application is live
+via `apply_theme(widget, colors=...)`, no restart required.

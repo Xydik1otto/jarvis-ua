@@ -167,6 +167,9 @@ class Settings:
     tune_enabled: bool
     hot_window_enabled: bool
     hot_window_seconds: float
+    # Follow-up window (v1.2.0): how long Jarvis keeps listening after a
+    # reply without requiring the wake word. 0 disables the follow-up.
+    followup_window_seconds: float
 
     # Echo Detection
     echo_energy_threshold: float
@@ -531,6 +534,8 @@ def get_default_config() -> Dict[str, Any]:
         "tune_enabled": True,
         "hot_window_enabled": True,
         "hot_window_seconds": 3.0,
+        # Follow-up window after a voice reply (seconds). 0 = disabled.
+        "followup_window_seconds": 15.0,
         "echo_energy_threshold": 2.0,
         "echo_tolerance": 0.3,  # Time tolerance for echo detection timing
 
@@ -804,6 +809,9 @@ def load_settings() -> Settings:
     tune_enabled = bool(merged.get("tune_enabled", True))
     hot_window_enabled = bool(merged.get("hot_window_enabled", True))
     hot_window_seconds = float(merged.get("hot_window_seconds", 3.0))
+    # Follow-up window after a reply; 0 disables it. Clamp negatives so a
+    # mistyped value can never re-enable or crash the listener.
+    followup_window_seconds = max(0.0, float(merged.get("followup_window_seconds", 15.0)))
     echo_energy_threshold = float(merged.get("echo_energy_threshold", 2.0))
     echo_tolerance = float(merged.get("echo_tolerance", 0.3))
 
@@ -985,6 +993,7 @@ def load_settings() -> Settings:
         tune_enabled=tune_enabled,
         hot_window_enabled=hot_window_enabled,
         hot_window_seconds=hot_window_seconds,
+        followup_window_seconds=followup_window_seconds,
         echo_energy_threshold=echo_energy_threshold,
         echo_tolerance=echo_tolerance,
         # Intent Judge - always used when available

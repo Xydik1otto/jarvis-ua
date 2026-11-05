@@ -339,6 +339,44 @@ def _clear_corrupted_whisper_cache(error_message: str) -> bool:
         return False
 
 
+def _coerce_seconds(value, default: float) -> float:
+    """Coerce *value* to a non-negative float, or *default* if not numeric.
+
+    Uses an isinstance gate rather than bare ``float()`` because test
+    doubles (MagicMock) auto-create attributes whose ``__float__`` magic
+    method silently returns 1.0 — a bare conversion would mistake a mock
+    placeholder for a one-second window.
+    """
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, (int, float)):
+        return max(0.0, float(value))
+    if isinstance(value, str):
+        try:
+            return max(0.0, float(value))
+        except ValueError:
+            return default
+    return default
+
+
+def _resolve_followup_window_seconds(cfg) -> float:
+    """Resolve the effective follow-up window duration (seconds).
+
+    ``followup_window_seconds`` is the canonical knob for how long Jarvis
+    keeps listening after a reply without the wake word (0 = off). Callers
+    whose config predates the field — and test doubles whose attribute
+    access returns a non-numeric placeholder — fall back to the legacy
+    ``hot_window_seconds`` so their behaviour is unchanged.
+    """
+    raw = getattr(cfg, "followup_window_seconds", None)
+    if raw is None:
+        return _coerce_seconds(getattr(cfg, "hot_window_seconds", 3.0), 3.0)
+    resolved = _coerce_seconds(raw, -1.0)
+    if resolved < 0:
+        return _coerce_seconds(getattr(cfg, "hot_window_seconds", 3.0), 3.0)
+    return resolved
+
+
 class VoiceListener(threading.Thread):
     """Main voice listening thread that orchestrates all voice processing."""
 
@@ -406,7 +444,10 @@ class VoiceListener(threading.Thread):
         )
 
         self.state_manager = StateManager(
-            hot_window_seconds=float(getattr(self.cfg, "hot_window_seconds", 3.0)),
+            # The follow-up window (post-reply listening) duration comes from
+            # followup_window_seconds; hot_window_seconds is only the legacy
+            # fallback for configs that predate the field.
+            hot_window_seconds=_resolve_followup_window_seconds(self.cfg),
             echo_tolerance=float(getattr(self.cfg, "echo_tolerance", 0.3)),
             voice_collect_seconds=float(getattr(self.cfg, "voice_collect_seconds", 2.0)),
             max_collect_seconds=float(getattr(self.cfg, "voice_max_collect_seconds", 60.0))
@@ -487,18 +528,27 @@ class VoiceListener(threading.Thread):
             self.echo_detector.track_tts_start(tts_text, baseline_energy)
 
     def activate_hot_window(self) -> None:
-        """Activate hot window after TTS completion."""
-        debug_log("TTS completed, checking hot window activation", "voice")
+        """Activate the follow-up window after TTS completion."""
+        debug_log("TTS completed, checking follow-up window activation", "voice")
 
-        if not self.cfg.hot_window_enabled:
-            debug_log("hot window disabled in config, skipping", "voice")
-            return
-
-        # Track TTS finish time for echo detection
+        # Track TTS finish time for echo detection — needed regardless of
+        # whether the follow-up window opens, so post-reply echo salvage
+        # keeps its timing reference even with the window disabled.
         self.echo_detector.track_tts_finish()
 
-        # Schedule delayed hot window activation
-        debug_log(f"scheduling hot window activation (echo_tolerance={self.state_manager.echo_tolerance}s, hot_window={self.state_manager.hot_window_seconds}s)", "voice")
+        if not self.cfg.hot_window_enabled:
+            debug_log("follow-up window disabled in config (hot_window_enabled), skipping", "voice")
+            return
+
+        if self.state_manager.hot_window_seconds <= 0:
+            debug_log(
+                "follow-up window disabled (followup_window_seconds=0), skipping",
+                "voice",
+            )
+            return
+
+        # Schedule delayed follow-up window activation
+        debug_log(f"scheduling follow-up window activation (echo_tolerance={self.state_manager.echo_tolerance}s, followup_window={self.state_manager.hot_window_seconds}s)", "voice")
         self.state_manager.schedule_hot_window_activation(self.cfg.voice_debug)
 
     def _process_transcript(self, text: str, utterance_energy: float = 0.0, utterance_start_time: float = 0.0, utterance_end_time: float = 0.0) -> None:

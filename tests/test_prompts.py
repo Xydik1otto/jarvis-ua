@@ -141,7 +141,7 @@ class TestPromptComponents:
         prompt_list = prompts.to_list()
 
         # Should have more items due to tool_constraints
-        assert len(prompt_list) == 6
+        assert len(prompt_list) == 8
 
         # Tool constraints should be in the list (greeting handling)
         has_constraints = any("привітан" in p.lower() for p in prompt_list)
@@ -158,8 +158,9 @@ class TestPromptComponents:
         prompts = get_system_prompts(ModelSize.LARGE)
         prompt_list = prompts.to_list()
 
-        # Both sizes now carry all 6 components.
-        assert len(prompt_list) == 6
+        # Both sizes now carry all components (grounding, recall, core 4,
+        # guidance, constraints).
+        assert len(prompt_list) == 8
 
         has_named_entity_rule = any("НЕВІДОМІ ІМЕНОВАНІ СУТНОСТІ" in p for p in prompt_list)
         assert has_named_entity_rule, "Large model should include the named-entity rule"
@@ -198,6 +199,52 @@ class TestPromptLanguageAgnosticism:
 
         # The language-agnostic phrasing must be present.
         assert "будь-якою мовою" in constraints
+
+
+class TestGroundingAndRecallRules:
+    """Field failures (2026-11-05, qwen2.5:7b-instruct): the [Context: ...]
+    time line was injected as the first line of the system message, yet the
+    model answered a time question with an invented date; and a fact stated
+    one turn earlier sat in the message list, yet the model answered a recall
+    question by promising to look it up later. Both rules must therefore be
+    stated firmly in the built system prompt for BOTH model sizes."""
+
+    def test_both_sizes_state_context_time_authority(self):
+        from jarvis.reply.prompts import get_system_prompts, ModelSize
+
+        for size in (ModelSize.SMALL, ModelSize.LARGE):
+            prompts = get_system_prompts(size)
+            assert prompts.context_ground_truth, f"{size.value} missing time rule"
+            text = prompts.context_ground_truth.lower()
+            assert "[context" in text
+            # The [Context] line is declared the authoritative source.
+            assert "авторитетним джерелом" in text
+            # Inventing a date/time is explicitly forbidden.
+            assert "не вигадуй" in text
+
+    def test_both_sizes_forbid_promised_not_executed_actions(self):
+        from jarvis.reply.prompts import get_system_prompts, ModelSize
+
+        for size in (ModelSize.SMALL, ModelSize.LARGE):
+            prompts = get_system_prompts(size)
+            assert prompts.recall_first, f"{size.value} missing recall rule"
+            text = prompts.recall_first.lower()
+            # Answer from what is already present.
+            assert "історії" in text
+            # Promising a future action instead of answering is banned.
+            assert "обіцянкою" in text
+            assert "у цьому самому ході" in text
+
+    def test_grounding_components_come_first_in_to_list(self):
+        """Primacy: the two rules sit at the front of the component stack,
+        immediately after the persona prose, so a small model reads them
+        before the long tool sections."""
+        from jarvis.reply.prompts import get_system_prompts, ModelSize
+
+        for size in (ModelSize.SMALL, ModelSize.LARGE):
+            prompt_list = get_system_prompts(size).to_list()
+            assert "[context" in prompt_list[0].lower()
+            assert "обіцянкою" in prompt_list[1].lower()
 
     def test_greeting_constraint_is_narrow(self):
         """Greeting constraint is narrowly scoped, not overly restrictive."""

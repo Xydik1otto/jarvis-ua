@@ -41,6 +41,8 @@ from jarvis.reply.prompts import (
 ### Prompt Components
 
 Both model sizes share these base components:
+- `context_ground_truth`: The [Context: ...] line at the top of the system message is the sole authoritative source for current date, weekday, time and location; inventing any of these is a forbidden answer
+- `recall_first`: If the answer is already in the conversation history or memory blocks, answer from it in the same turn; announcing a future action instead of acting ("завантажу", "знайду") is forbidden; user-stated facts are recalled from history/memory without external searches
 - `asr_note`: Voice transcription error handling
 - `inference_guidance`: Prefer inference over clarification
 - `voice_style`: Concise, conversational responses

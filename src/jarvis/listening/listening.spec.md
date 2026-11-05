@@ -143,7 +143,9 @@ After TTS finishes, allow wake-word-free follow-up.
 
 **Activation:** `echo_tolerance` seconds after TTS ends (allows echo to settle)
 
-**Duration:** Configurable (default: 3 seconds)
+**Duration:** Configurable via `followup_window_seconds` (default: 15 seconds; `0` disables the follow-up window entirely). This is the v1.2.0 follow-up window: after every reply Jarvis keeps listening without the wake word for the configured duration. Legacy configs and test doubles that predate the field fall back to `hot_window_seconds` (3 seconds) so their behaviour is unchanged. `hot_window_enabled: false` also disables the follow-up window.
+
+**Exit rules:** Silence/timeout past the window duration returns to wake word mode (timer-based expiry). A new phrase inside the window is processed as a normal query without the wake word; a phrase containing the wake word also works (the wake word is stripped from the query). Echo of Jarvis's own TTS never triggers or extends the window — the same echo guards as below apply for the whole window duration.
 
 **Behaviour:** Speech first passes through an early fuzzy echo check (rapidfuzz `partial_ratio`, threshold 70, with word-count guard to avoid catching mixed echo+speech). Pure echo is silently rejected **without calling the intent judge** — this keeps echo rejection instant and prevents it from blocking the audio loop. The hot window timer is **not** reset on echo rejection. Non-echo speech is sent to the intent judge, but if the judge rejects it, the rejection is overridden — all non-echo speech in the hot window is accepted as a follow-up query.
 
@@ -294,6 +296,7 @@ If the intent judge later rejects the query (and no hot window override applies)
   "intent_judge_timeout_sec": 15.0,
 
   "hot_window_seconds": 3.0,
+  "followup_window_seconds": 15.0,
   "echo_tolerance": 0.3
 }
 ```

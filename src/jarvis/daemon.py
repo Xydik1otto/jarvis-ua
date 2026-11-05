@@ -473,6 +473,18 @@ def main() -> None:
     else:
         print("  TTS вимкнено", flush=True)
 
+    # Timer poller: elapsed timers announce themselves through TTS (and the
+    # console) without another LLM round-trip. Non-fatal when TTS is off.
+    try:
+        from .tools.builtin import timer_tool as _timer_tool
+
+        # tts.speak() no-ops when TTS is disabled; the poller's own
+        # try/except keeps the console announcement alive regardless.
+        _timer_tool.REGISTRY.start_polling(lambda text: tts.speak(text))
+        print("⏲️ Фоновий оглядач таймерів активний", flush=True)
+    except Exception as e:
+        debug_log(f"timer poller init failed (non-fatal): {e}", "tools")
+
     # Initialize voice listening (only if dependencies available)
     print("🎤 Ініціалізую голосовий слухач (завантаження моделі Whisper може зайняти час)...", flush=True)
     voice_thread: Optional[threading.Thread] = None
