@@ -66,10 +66,10 @@ class TestPromptComponents:
         text = prompts.tool_constraints.lower()
         # Each section header must be present — they structure the rules.
         for section in (
-            "greeting handling",
-            "user instructions",
-            "unknown named entities",
-            "arguments the tool can auto-derive",
+            "обробка привітань",
+            "інструкції користувача",
+            "невідомі іменовані сутності",
+            "аргументи, які інструмент виводить сам",
         ):
             assert section in text, f"Missing section {section!r} in small-model constraints"
 
@@ -84,8 +84,8 @@ class TestPromptComponents:
 
         assert prompts.tool_constraints is not None
         text = prompts.tool_constraints.lower()
-        assert "unknown named entities" in text
-        assert "arguments the tool can auto-derive" in text
+        assert "невідомі іменовані сутності" in text
+        assert "аргументи, які інструмент виводить сам" in text
 
     def test_small_model_balanced_incentives(self):
         """Small models get balanced tool incentives - use tools but not for greetings."""
@@ -94,9 +94,9 @@ class TestPromptComponents:
         prompts = get_system_prompts(ModelSize.SMALL)
 
         # Should encourage tool use for legitimate cases
-        assert "use tools" in prompts.tool_incentives.lower()
+        assert "використовуй інструменти" in prompts.tool_incentives.lower()
         # But mention greetings specifically
-        assert "greeting" in prompts.tool_incentives.lower()
+        assert "привітань" in prompts.tool_incentives.lower()
 
     def test_large_model_proactive_incentives(self):
         """Large models get proactive tool incentives."""
@@ -105,7 +105,7 @@ class TestPromptComponents:
         prompts = get_system_prompts(ModelSize.LARGE)
 
         # Should encourage proactive tool use
-        assert "proactively" in prompts.tool_incentives.lower()
+        assert "проактивно" in prompts.tool_incentives.lower()
 
     def test_both_sizes_have_core_components(self):
         """Both model sizes have the core prompt components."""
@@ -144,7 +144,7 @@ class TestPromptComponents:
         assert len(prompt_list) == 6
 
         # Tool constraints should be in the list (greeting handling)
-        has_constraints = any("greeting" in p.lower() for p in prompt_list)
+        has_constraints = any("привітан" in p.lower() for p in prompt_list)
         assert has_constraints, "Small model should include greeting constraints"
 
     def test_large_model_to_list_includes_constraints(self):
@@ -161,9 +161,9 @@ class TestPromptComponents:
         # Both sizes now carry all 6 components.
         assert len(prompt_list) == 6
 
-        has_named_entity_rule = any("UNKNOWN NAMED ENTITIES" in p for p in prompt_list)
+        has_named_entity_rule = any("НЕВІДОМІ ІМЕНОВАНІ СУТНОСТІ" in p for p in prompt_list)
         assert has_named_entity_rule, "Large model should include the named-entity rule"
-        has_auto_derive_rule = any("AUTO-DERIVE" in p for p in prompt_list)
+        has_auto_derive_rule = any("ВИВОДИТЬ САМ" in p for p in prompt_list)
         assert has_auto_derive_rule, "Large model should include the auto-derive rule"
 
 
@@ -185,7 +185,7 @@ class TestPromptLanguageAgnosticism:
         constraints = prompts.tool_constraints.lower()
 
         # The section itself must be present.
-        assert "greeting handling" in constraints
+        assert "обробка привітань" in constraints
 
         # None of the old English-biased greeting tokens should be hard-coded
         # into the prompt any more.
@@ -197,7 +197,7 @@ class TestPromptLanguageAgnosticism:
             )
 
         # The language-agnostic phrasing must be present.
-        assert "whatever language" in constraints or "any language" in constraints
+        assert "будь-якою мовою" in constraints
 
     def test_greeting_constraint_is_narrow(self):
         """Greeting constraint is narrowly scoped, not overly restrictive."""
@@ -207,7 +207,8 @@ class TestPromptLanguageAgnosticism:
         constraints = prompts.tool_constraints.lower()
 
         # Should mention greetings specifically
-        assert "greeting" in constraints
+        assert "привітан" in constraints
         # Should NOT have overly broad restrictions like "ONLY use tools when explicitly asked"
         # (This would hurt legitimate tool use for news, weather, etc.)
         assert "only when explicitly" not in constraints
+        assert "лише коли явно" not in constraints

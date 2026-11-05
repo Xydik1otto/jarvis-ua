@@ -270,7 +270,10 @@ def _select_llm(
         "comma-separated list of their exact names. Prefer fewer (1-3) when the "
         "query is clearly about one thing; never return more than 5. "
         "Return 'none' ONLY for pure greetings/small talk OR when the exact "
-        "fact needed is already visible in the KNOWN FACTS block below. If "
+        "fact needed is already visible in the KNOWN FACTS block below. "
+        "'Unknown' values inside KNOWN FACTS (Location: Unknown, etc.) are "
+        "NOT known facts — they mean the lookup failed; if the query needs "
+        "that data, pick a tool. If "
         "the query depends on data NOT in KNOWN FACTS — the user's logs, "
         "current conditions, web info, files, screen — pick a tool, even "
         "when the phrasing is indirect ('should I order pizza?' → needs the "
@@ -329,6 +332,10 @@ def _select_llm(
         resp = llm_backend.direct(
             llm_model, sys_prompt, user_prompt,
             timeout_sec=llm_timeout_sec,
+            # Classification-shaped call: determinism beats creativity, and
+            # the router's verdict must not flap between turns on the same
+            # query (a flapping pick breaks the hot-window cache contract).
+            temperature=0.0,
         )
     except Exception as e:
         debug_log(f"LLM tool selection failed: {e}, falling back to keyword strategy", "planning")

@@ -20,8 +20,8 @@ def test_style_only_block():
     cfg = types.SimpleNamespace(user_profile={"communication_style": "Коротко, на «ти»"})
     block = build_user_profile_block(cfg)
     assert block is not None
-    assert "How to communicate with them: Коротко, на «ти»" in block
-    assert "tasks and goals" not in block
+    assert "Як спілкуватися з користувачем: Коротко, на «ти»" in block
+    assert "задач" not in block
 
 
 @pytest.mark.unit
@@ -30,9 +30,9 @@ def test_style_and_goals_block():
         user_profile={"communication_style": "S", "goals": "Ship the UK build"}
     )
     block = build_user_profile_block(cfg)
-    assert "authoritative" in block
-    assert "How to communicate with them: S" in block
-    assert "Their current tasks and goals: Ship the UK build" in block
+    assert "авторитетних" in block
+    assert "Як спілкуватися з користувачем: S" in block
+    assert "Поточні задачі та цілі користувача: Ship the UK build" in block
 
 
 @pytest.mark.unit

@@ -45,9 +45,15 @@ def _extract_place_from_user_text(text: str, cfg) -> Optional[str]:
 
     sys_prompt = (
         "You extract a single place name from a user's utterance so a weather "
-        "tool can look it up. Reply with ONLY the place name (city, town, or "
-        "country), with no punctuation, quotes, or explanation. If the user "
-        "did not name any place, reply with exactly: none"
+        "tool can look it up in a geocoding database. Reply with ONLY the place "
+        "name (city, town, or country), with no punctuation, quotes, or "
+        "explanation. The name MUST be in its dictionary (nominative) form — "
+        "for example, from 'weather in Kyiv' extract 'Kyiv', never the "
+        "grammatically inflected form the user's language happens to use. "
+        "Prefer the Latin-alphabet international spelling when you are "
+        "confident of it (Kyiv, London, Tokyo); otherwise reply in the "
+        "language of the utterance. If the user did not name any place, reply "
+        "with exactly: none"
     )
     user_prompt = f"User utterance: {text}\n\nPlace:"
 
@@ -122,11 +128,12 @@ class WeatherTool(Tool):
     @property
     def description(self) -> str:
         return (
-            "Weather only (current + forecast). NOT for time-of-day, date, or "
-            "location questions — those are already in the assistant's context. "
+            "Weather only (current + forecast). NOT for time-of-day or date "
+            "questions — those are already in the assistant's context. "
             "Use for ANY weather question: now, later today, tomorrow, this week. "
             "Call with {} — user location is auto-detected. Do NOT ask the user "
-            "where they are or request a city; just call this tool with empty args."
+            "where they are or request a city; just call this tool with empty args. "
+            "A named city goes in the optional 'location' argument."
         )
 
     @property
@@ -256,18 +263,28 @@ class WeatherTool(Tool):
                 )
 
                 geocode_url = "https://geocoding-api.open-meteo.com/v1/search"
-                # Intentionally English — tool results are processed by the LLM,
-                # not shown to the user.  All models handle English data well.
-                geocode_params = {
-                    "name": location_str,
-                    "count": 1,
-                    "language": "en",
-                    "format": "json"
-                }
-
-                geo_response = requests.get(geocode_url, params=geocode_params, timeout=10)
-                geo_response.raise_for_status()
-                geo_data = geo_response.json()
+                # Non-ASCII city names (Ukrainian Cyrillic, etc.) only match
+                # when the query language matches the language of the name, so
+                # try the utterance's language first, then English. Tool
+                # results are processed by the LLM, not shown to the user.
+                utterance_lang = (getattr(context, "language", None) or "en").strip().lower() or "en"
+                geocode_languages = [utterance_lang] if utterance_lang == "en" else [utterance_lang, "en"]
+                geo_data = {}
+                for geo_lang in geocode_languages:
+                    geo_response = requests.get(
+                        geocode_url,
+                        params={
+                            "name": location_str,
+                            "count": 1,
+                            "language": geo_lang,
+                            "format": "json",
+                        },
+                        timeout=10,
+                    )
+                    geo_response.raise_for_status()
+                    geo_data = geo_response.json()
+                    if geo_data.get("results"):
+                        break
 
                 if not geo_data.get("results"):
                     return ToolExecutionResult(

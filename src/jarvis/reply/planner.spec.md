@@ -140,7 +140,7 @@ The engine consumes the plan in two phases.
 
 **Phase 2 — loop integration (existing behaviour):**
 
-- `format_plan_block(steps)` renders an `ACTION PLAN:` block that is
+- `format_plan_block(steps)` renders a `ПЛАН ДІЙ:` block that is
   appended to the initial system message. Empty plan renders nothing.
   Single-step reply-only plans are not rendered either — they are
   noise to the chat model since the plan just says "reply".

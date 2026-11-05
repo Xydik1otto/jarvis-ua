@@ -230,7 +230,7 @@ class TestFormatPlanBlock:
         block = format_plan_block(["step a", "step b"])
         assert "1. step a" in block
         assert "2. step b" in block
-        assert "ACTION PLAN" in block
+        assert "ПЛАН ДІЙ" in block
 
 
 class TestProgressNudge:

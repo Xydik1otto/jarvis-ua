@@ -75,7 +75,7 @@ def test_plan_injects_action_plan_block_into_system_message(
         )
 
     assert captured_system_messages, "chat model should have been called at least once"
-    assert "ACTION PLAN" in captured_system_messages[0], (
+    assert "ПЛАН ДІЙ" in captured_system_messages[0], (
         "Planner output must be visible to the chat model in the initial system message"
     )
     for step in plan:
@@ -215,8 +215,8 @@ def test_empty_plan_falls_through_to_existing_behaviour(
         )
 
     assert captured_system_messages
-    assert "ACTION PLAN" not in captured_system_messages[0], (
-        "Empty plan must NOT inject an ACTION PLAN block"
+    assert "ПЛАН ДІЙ" not in captured_system_messages[0], (
+        "Empty plan must NOT inject an action-plan block"
     )
 
 

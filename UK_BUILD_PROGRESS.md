@@ -181,6 +181,16 @@
 - E2E: запустити демон і сказати «Джарвіс, яка погода?» — має швидко відповісти українською.
 
 ## Журнал змін
+- 2026-11-05 (день, E2E debugging): Проженено повний headless-E2E ланцюг. Знайдено й виправлено 3 баги:
+  (1) Геокодер Open-Meteo не знаходить кириличні назви з language=en → каскад мов (мова вислову → en).
+  (2) LLM-екстрактор місця повертав відмінкову форму («Києві») → промпт тепер вимагає називний відмінок
+  і латиницю («Kyiv»). (3) Опис getWeather «NOT for location questions» + «Location: Unknown» у KNOWN FACTS
+  збивали роутер на 'none' → опис переписано + 'Unknown' values явно не вважаються відомими фактами +
+  temperature=0.0 для роутера. (4) Windows %Z давав «Фінляндія (зима)» → IANA-мапінг FLE→Europe/Kyiv (EET).
+  (5) Приклад «Harry Styles» у промптах паротився моделлю у відповідях → замінено на нейтральний «гурт Queen».
+  Фінальний E2E: привітання укр, погода Києва повністю (5.0°C, Overcast, вітер, вологість, прогноз),
+  без китайських вкраплень і паротування прикладів. Латентність 6.5-32 с залежно від кількості LLM-викликів.
+
 - 2026-11-04: Роутер «спитати інший ШІ» [ГОТОВО ✅]. Новий інструмент `src/jarvis/tools/builtin/ask_ai.py`
   (`registry.py` → `BUILTIN_TOOLS["askAi"]`) + спека `ask_ai.spec.md`. Конфіг: `ask_ai_enabled` (true) +
   `ask_ai_targets` (дефолт: DeepSeek Coder→`deepseek-coder-v2`, Qwen Coder→`qwen2.5-coder:7b`, Qwen→`qwen2.5:7b-instruct`,
@@ -219,6 +229,36 @@
   не від наших змін). Ollama не встановлена (winget виснув на DeliveryOptimization) — завантаження
   перенесено на 08:00 за Києвом (cron fe0ba2b1196c), щоб не жерти денний інтернет.
   Локальні коміти: ua-build 6502fe9 (база), cdef570 (askAi + UI локалізація).
+- 2026-11-05: Локалізація LLM-промптів укр. [ГОТОВО ✅]. Root cause «каши» у відповідях
+  (вигадані слова на кшталт «буліймір», витоки китайського): qwen2.5:7b-instruct дрейфує,
+  коли довгий англ. системний промпт (~21 KB) мусить давати укр-відповідь. Перевірено живим
+  експериментом: короткий/укр промпт → чиста українська. Виправлення: усі компоненти
+  системного промпту чату перекладено українською (неформальне «ти», без ем-дефісів):
+  - `src/jarvis/system_prompt.py`: персону (британський дворецький, ~5.6 KB) перекладено;
+    механізм {name} збережено; заборонені англ. формули відмови замінено укр канонічними
+    (denial-template mirroring, CLAUDE.md).
+  - `src/jarvis/reply/prompts/system.py`: ASR_NOTE, INFERENCE_GUIDANCE, VOICE_STYLE.
+  - `src/jarvis/reply/prompts/model_variants.py`: TOOL_INCENTIVES/GUIDANCE/CONSTRAINTS
+    LARGE і SMALL. Механізм x2-дублювання TOOL_CONSTRAINTS_SMALL збережено (arXiv:2401.14887,
+    arXiv:2307.03172). Імена інструментів та їх аргументи (webSearch, toolSearchTool,
+    getWeather, launchApp, stop), літеральні мітки конверту webSearch («**Content from top
+    result:**», «**Other search results:**») і приклад «Harry Styles» лишено англ.
+  - `src/jarvis/reply/engine.py`: _text_tool_call_guidance (JSON-літерал tool_calls і
+    заборонені форми tool_code/tool_output/<unused залишено як ідентифікатори протоколу),
+    build_reply_language_guidance, build_user_profile_block, шапка graph_context, обрамлення
+    diary-збагачення («лише як довідка») і memory-digest блоку.
+  - `src/jarvis/reply/planner.py`: format_plan_block → «ПЛАН ДІЙ» (planner вимкнено в конфізі,
+    змінено для повноти).
+  - Тести під укр-копію: test_prompts.py, test_system_prompt.py (+2 нові тести: укр-текст і
+    без ем-дефісів), test_user_profile.py, test_text_tool_call_parser.py (укр-негації),
+    test_diary_poisoning_defence.py (framing-твердження), test_planner.py,
+    test_engine_planner_integration.py, test_enrichment.py (шапка graph_context).
+    Прогон: test_prompts + test_system_prompt + test_prompt_dump + test_intent_judge +
+    test_user_profile + test_reply_language + test_text_tool_call_parser + test_planner +
+    test_diary_poisoning_defence = 231 passed; test_enrichment = 52 passed.
+    py_compile усіх торкнутих файлів OK. Недоторкано: інструментні описи (registry.py),
+    промпти intent judge / router / planner-планування / summariser / merge (окремі LLM-контексти,
+    не чат-промпт), desktop_app. Після прогонів движка рекомендовано живу E2E-перевірку з Ollama.
 - 2026-11-05 (ранок): Ollama 0.40.14 встановлено (winget виснув — качав напряму, 1.67 GB). Сервер
   бачить усі 4 моделі з G:\Ollama. Знайдено КОРІНЬ «макароння» в укр-відповідях: системний промпт
   21 KB англійською → qwen2.5:7b-instruct (Q4_K_M) дрейфує (видумані слова, китайські вкраплення);

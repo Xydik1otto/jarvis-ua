@@ -113,5 +113,5 @@ Live evals target the smallest supported model (gemma4:e2b) and `xfail` softly o
 
 ## Relationship to Other Systems
 
-- **Diary retrieval** (`engine.py`): injects retrieved summaries under a "reference only" framing, not as authoritative instructions. This partially mitigates corrupted summaries, but the primary defence is the summariser itself — see `reply.spec.md`.
+- **Diary retrieval** (`engine.py`): injects retrieved summaries under a reference-only framing («лише як довідка» in the Ukrainian prompt copy), not as authoritative instructions. This partially mitigates corrupted summaries, but the primary defence is the summariser itself — see `reply.spec.md`.
 - **Knowledge graph** (`graph.spec.md`): ingests summaries via `update_graph_from_dialogue()`. Graph extraction inherits whatever corruption the summary contains; hygiene at the summariser is the only place to fix this at source.

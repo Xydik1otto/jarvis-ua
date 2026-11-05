@@ -221,7 +221,10 @@ class TestTextToolCallGuidancePrompt:
         window = text[max(0, idx - 200) : idx + 200].lower()
         assert any(
             neg in window
-            for neg in ("do not", "don't", "never", "will fail", "forbidden", "not accepted")
+            for neg in (
+                "do not", "don't", "never", "will fail", "forbidden", "not accepted",
+                "не видавай", "ніколи", "заборонен", "не працюватимуть",
+            )
         ), (
             "The `tool_code` mention must be in a forbidding context, "
             "not a positive example. Showing gemma's native protocol as "

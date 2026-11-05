@@ -227,9 +227,9 @@ _PROMPT_TEMPLATE = (
     "appear LITERALLY in the tool argument — tools never see the "
     "dialogue, so a tool call like `webSearch query='his most famous "
     "songs'` is broken: the search engine has no idea who 'his' is. "
-    "Example: dialogue mentions Harry Styles, user says 'what are his "
-    "most famous songs?' → emit `webSearch query='Harry Styles most "
-    "famous songs'`, NOT `webSearch query='his most famous songs'`. "
+    "Example: dialogue mentions the band Queen, user says 'what are their "
+    "most famous songs?' → emit `webSearch query='Queen band most famous "
+    "songs'`, NOT `webSearch query='their most famous songs'`. "
     "Same rule for 'that film', 'that book', 'her album' — substitute "
     "the concrete entity name from dialogue.\n"
     "8. Final step is always a synthesis/reply step when any "
@@ -484,10 +484,10 @@ def format_plan_block(steps: Sequence[str]) -> str:
         return ""
     numbered = "\n".join(f"{i + 1}. {s}" for i, s in enumerate(steps))
     return (
-        "\nACTION PLAN for this query (your own pre-committed sub-tasks — "
-        "follow them in order; if a step is already satisfied by a prior "
-        "tool result, move to the next; do NOT stop after step 1 if more "
-        "steps remain):\n"
+        "\nПЛАН ДІЙ для цього запиту (твої власні попередньо взяті підзадачі: "
+        "виконуй їх по порядку; якщо крок уже задоволено попереднім "
+        "результатом інструменту, переходь до наступного; НЕ зупиняйся після "
+        "кроку 1, якщо лишилися ще кроки):\n"
         + numbered
     )
 
