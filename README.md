@@ -4,6 +4,8 @@
 
 🔒 100% local processing. No subscriptions. No data harvesting. Automatic redaction of sensitive info. Free offline dictation included.
 
+> 🇺🇦 **Ukrainian build** (this fork): the entire voice pipeline, desktop UI, setup wizard and LLM prompt layer are localised to Ukrainian (informal «ти»). Chat is tuned for `qwen2.5:7b-instruct` on an 8 GB VRAM GPU with Whisper `medium` on CPU, Piper Ukrainian TTS, wake word «джарвіс», plus two extra built-in tools: `launchApp` (open programs/games/YouTube/Steam/Spotify by fuzzy-matched Ukrainian aliases) and `askAi` (delegate a question to another locally installed Ollama model). A game mode unloads the LLM from VRAM while a game is running.
+
 ---
 
 **Support Jarvis** [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ff69b4?logo=github)](https://github.com/sponsors/isair) [![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-ff5722?logo=kofi&logoColor=white)](https://ko-fi.com/isair)
