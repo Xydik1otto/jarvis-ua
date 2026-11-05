@@ -43,6 +43,9 @@ def fake_controller(monkeypatch):
     ctrl = FakeController()
     monkeypatch.setattr(mc, "_get_controller", lambda: ctrl)
     monkeypatch.setattr(mc, "_KEYS", FakeKey)
+    # Headless CI (no X display) fails the pynput import, leaving the module
+    # flag False; the tool checks it before reaching the patched controller.
+    monkeypatch.setattr(mc, "_PYNPUT_AVAILABLE", True)
     return ctrl
 
 
